@@ -1,0 +1,15 @@
+{
+  "name": "HorseParking.Core.Tests",
+  "rootNamespace": "HorseParking.Tests",
+  "references": ["HorseParking.Core"],
+  "includePlatforms": ["Editor"],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": ["TestAssemblies"]
+}

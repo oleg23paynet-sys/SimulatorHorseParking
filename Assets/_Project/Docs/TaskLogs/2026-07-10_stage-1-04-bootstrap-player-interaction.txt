@@ -1,0 +1,30 @@
+Этап roadmap: Этап 1 - основа Unity-проекта и взаимодействия.
+Задача: 1.4 - Bootstrap-сцена, вид от первого лица без рук и техническое взаимодействие.
+
+Что сделано:
+- Добавлен FirstPersonPlayerController: WASD, мышь, гравитация и raycast взаимодействия.
+- Камера существует без рук и без модели игрока.
+- Добавлен временный DebugInteractionTarget, реализующий Core-контракт IInteractionTarget.
+- Добавлен BootstrapSceneBuilder: создаёт техническую сцену с Composition Root, игроком, камерой, плоскостью и кубом.
+- Добавлена инструкция Docs/Developer/HowToRun.md.
+- Обновлена developer-карта файлов.
+
+Изменённые файлы:
+- Assets/_Project/Presentation/Player/FirstPersonPlayerController.cs
+- Assets/_Project/Presentation/Interaction/DebugInteractionTarget.cs
+- Assets/_Project/Presentation/Editor/HorseParking.Presentation.Editor.asmdef
+- Assets/_Project/Presentation/Editor/BootstrapSceneBuilder.cs
+- Assets/_Project/Docs/Developer/FileMap.md
+- Docs/Developer/HowToRun.md
+
+Проверка:
+- Unity batch-проверка компиляции пройдена без ошибок.
+- BootstrapSceneBuilder выполнен без ошибок; создан Assets/_Project/Scenes/Bootstrap.unity.
+- Сцена добавлена как единственная включённая сцена в ProjectSettings/EditorBuildSettings.asset.
+
+Ограничения:
+- Плоскость и куб технические, не являются финальными assets.
+- UI-подсказка и окно взаимодействия не добавлены на этой задаче.
+
+Следующий шаг в рамках Этапа 1:
+- Проверить запуск Bootstrap-сцены, затем добавить UI-подсказку с локализуемыми ключами и заменить DebugInteractionTarget адаптером таблички.

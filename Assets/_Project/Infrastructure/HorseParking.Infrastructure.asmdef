@@ -1,0 +1,14 @@
+{
+  "name": "HorseParking.Infrastructure",
+  "rootNamespace": "HorseParking.Infrastructure",
+  "references": ["HorseParking.Core", "HorseParking.Application"],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}

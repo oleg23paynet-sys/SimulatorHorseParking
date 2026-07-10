@@ -1,0 +1,39 @@
+Этап roadmap: Этап 1 - основа Unity-проекта и взаимодействия.
+Задача: 1.2 - создать Core-контракты для локализации, времени, случайности и взаимодействия.
+
+Что сделано:
+- Добавлен LocalizationKey: ключ текста вместо хранения отображаемых строк в коде.
+- Добавлен ILocalizationService: Core зависит от контракта перевода, а не от Unity-пакета или таблицы.
+- Добавлены IGameClock и IRandomSource: время и случайность будут передаваться в Core через DI.
+- Добавлен общий контракт IInteractionTarget, а также InteractionPrompt, InteractionResult и InteractionAvailability.
+- Добавлен InteractWithTargetUseCase в Application: Presentation запускает взаимодействие через use case.
+- Обновлена developer-карта файлов с назначением каждого добавленного файла.
+- Во время проверки удалены несовместимые пакеты Input System 1.12.0 и AI Navigation 2.0.0; базовый ввод Этапа 1 будет использовать встроенный Input Manager Unity через Presentation-адаптер.
+
+Изменённые файлы:
+- Assets/_Project/Core/Localization/LocalizationKey.cs
+- Assets/_Project/Core/Localization/ILocalizationService.cs
+- Assets/_Project/Core/Time/IGameClock.cs
+- Assets/_Project/Core/Randomness/IRandomSource.cs
+- Assets/_Project/Core/Interaction/InteractionAvailability.cs
+- Assets/_Project/Core/Interaction/InteractionPrompt.cs
+- Assets/_Project/Core/Interaction/InteractionResult.cs
+- Assets/_Project/Core/Interaction/IInteractionTarget.cs
+- Assets/_Project/Application/Interaction/InteractWithTargetUseCase.cs
+- Assets/_Project/Docs/Developer/FileMap.md
+
+Проверка:
+- Core и Application используют только C# и ссылки между внутренними assembly definitions.
+- В добавленных файлах отсутствуют UnityEngine, MonoBehaviour, сцены, префабы, assets и отображаемые игроку строки.
+- В ходе Unity-проверки удалена дублирующая ссылка Test Runner из Assets/_Project/Tests/HorseParking.Core.Tests.asmdef.
+- Unity-проверка обнаружила несовместимость Input System 1.12.0 с Unity 6.5.0f1; зависимость удалена из Packages/manifest.json до следующей проверки.
+- Unity-проверка обнаружила несовместимость AI Navigation 2.0.0 с Unity 6.5.0f1; зависимость удалена до задачи NPC-навигации.
+- Добавленный Core-код переведён с file-scoped namespace на block namespace для совместимости с C# 9 проекта.
+- Финальная batch-проверка Unity завершилась без ошибок компиляции.
+
+Ограничения:
+- Реализации времени, случайности, локализации и Unity-адаптер взаимодействия ещё не добавлены.
+- Стартовая сцена, камера и управление ещё не реализованы.
+
+Следующий шаг в рамках Этапа 1:
+- Добавить Infrastructure-реализации контрактов и Composition Root для DI без UI и assets.
