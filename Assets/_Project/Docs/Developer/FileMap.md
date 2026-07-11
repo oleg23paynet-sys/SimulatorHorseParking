@@ -116,7 +116,11 @@
 | `Assets/_Project/Presentation/Animation/Controllers/AC_XBotSeatedIdle.controller` | Animator Controller: единственное состояние готовой анимации `Seated Idle`. | Добавлять новые состояния только из готовых импортированных клипов. |
 | `Assets/_Project/Docs/TaskLogs/2026-07-11_stage-2-01-rider-seated-idle.txt` | Отчёт о подключении наездника. | Текущий итог подзадачи 2.1. |
 | `Assets/_Project/Content/Models/Characters/Horse/CartoonRiggedHorse/` | Бесплатная скачанная FBX-пони. | Сохранена, но не использовать для Parking MVP-клиента. |
+| `Assets/_Project/Content/Models/AdultTexturedHorse/` | Взрослая лошадь, скачанная пользователем, но только в OBJ/BLEND/STL. | Не подключать: в комплекте нет FBX. |
 | `Assets/_Project/Content/Models/Characters/Rider/MedievalCharacter/` | Текстурированный средневековый наездник FBX и texture. | Кандидат на замену X Bot. |
+| `Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/SM_RedHorseRider.fbx` | Готовая цельная FBX-пара: взрослая лошадь и сидящий наездник. | Используется как `ClientMountedHorseRider_01` в ParkingMvp. |
+| `Assets/_Project/Content/Materials/Characters/MountedClients/M_RedHorseRiderHorse.mat` | Материал лошади с готовой текстурой из архива Red Horse Rider. | Менять только материал/texture assignment. |
+| `Tools/ConvertRedHorseRiderToFbx.py` | Автоматический Blender-export исходного `.blend` в FBX. | Не моделирует и не меняет позу; только конвертирует формат. |
 | `Assets/_Project/Content/Animations/Characters/Rider/MedievalRider/` | Готовые FBX `Walk` и `T-Pose` для средневекового наездника. | Привязывать через Humanoid Avatar, не создавать вручную. |
 
 ### Current correction status (2026-07-11)

@@ -11,17 +11,21 @@ namespace HorseParking.Presentation.Editor
 {
     public static class ParkingMvpSceneBuilder
     {
+        private static float groundSurfaceY;
         private const string ScenePath = "Assets/_Project/Scenes/ParkingMvp.unity";
         private const string GroundPath = "Assets/_Project/Content/Models/Environment/ParkingGround/CobblestoneLowpoly/cobblestone.fbx";
-        private const string HorsePath = "Assets/_Project/Content/Models/Characters/Horse/LowPolyHorse/uploads_files_2798555_Horse.fbx";
-        private const string RiderPath = "Assets/_Project/Content/Models/Characters/Rider/X Bot.fbx";
-        private const string RiderAnimationPath = "Assets/_Project/Content/Animations/Characters/Rider/XBot_SeatedIdle.fbx";
-        private const string RiderControllerPath = "Assets/_Project/Presentation/Animation/Controllers/AC_XBotSeatedIdle.controller";
+        private const string MountedClientPath = "Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/SM_RedHorseRider.fbx";
+        private const string AdultHorsePath = "Assets/_Project/Content/Models/Characters/Horse/AdultTexturedHorse/uploads_files_2751214_horse.fbx";
+        private const string RiderPath = "Assets/_Project/Content/Models/Characters/Rider/MedievalCharacter/SM_MedievalRider.fbx";
+        private const string RiderAnimationPath = "Assets/_Project/Content/Animations/Characters/Rider/MedievalRider/SeatedIdle_Source.fbx";
+        private const string RiderControllerPath = "Assets/_Project/Presentation/Animation/Controllers/AC_MedievalRiderSeatedIdle.controller";
         private const string StorePath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/blue/building_market_blue.fbx";
         private const string WarehousePath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/blue/building_lumbermill_blue.fbx";
         private const string GatePath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/neutral/fence_wood_straight_gate.fbx";
         private const string SackPath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/decoration/props/sack.fbx";
         private const string HorseMaterialPath = "Assets/_Project/Content/Materials/Characters/Horse/M_HorseChestnut.mat";
+        private const string MountedHorseMaterialPath = "Assets/_Project/Content/Materials/Characters/MountedClients/M_RedHorseRiderHorse.mat";
+        private const string MountedHorseTexturePath = "Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/textures/HorseWagonTexture2.png";
 
         [MenuItem("Horse Parking/Build Parking MVP Scene")]
         public static void Build()
@@ -73,7 +77,8 @@ namespace HorseParking.Presentation.Editor
         {
             var ground = InstantiateAsset(GroundPath, "ParkingGround_Cobblestone");
             ScaleToHorizontalLength(ground, 30f);
-            PlaceBaseOnGround(ground);
+            PlaceBaseAtHeight(ground, 0f);
+            groundSurfaceY = GetBounds(ground).max.y;
             AddGroundCollider(ground);
         }
 
@@ -89,13 +94,41 @@ namespace HorseParking.Presentation.Editor
 
         private static void CreateClient()
         {
-            var horse = InstantiateAsset(HorsePath, "ClientHorse_01");
+            var horse = InstantiateAsset(AdultHorsePath, "ClientHorse_01");
             ScaleToHeight(horse, 1.65f);
             horse.transform.position = new Vector3(0f, 0f, -1f);
             PlaceBaseOnGround(horse);
-            ApplyHorseMaterial(horse);
-            CreateRider(horse);
             AddMeshColliders(horse);
+        }
+
+        private static void ApplyMountedHorseMaterial(GameObject mountedClient)
+        {
+            var horseRenderer = mountedClient.GetComponentsInChildren<Renderer>()
+                .FirstOrDefault(renderer => renderer.name == "Horse");
+            var horseTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(MountedHorseTexturePath);
+            if (horseRenderer == null || horseTexture == null)
+            {
+                throw new System.InvalidOperationException("Mounted horse material or texture is missing.");
+            }
+
+            EnsureFolder("Assets/_Project/Content/Materials");
+            EnsureFolder("Assets/_Project/Content/Materials/Characters");
+            EnsureFolder("Assets/_Project/Content/Materials/Characters/MountedClients");
+            AssetDatabase.DeleteAsset(MountedHorseMaterialPath);
+            var material = new Material(horseRenderer.sharedMaterial)
+            {
+                name = "M_RedHorseRiderHorse",
+                mainTexture = horseTexture
+            };
+            AssetDatabase.CreateAsset(material, MountedHorseMaterialPath);
+
+            foreach (var renderer in mountedClient.GetComponentsInChildren<Renderer>())
+            {
+                if (renderer.name == "Horse" || renderer.name.StartsWith("tireshape"))
+                {
+                    renderer.sharedMaterial = material;
+                }
+            }
         }
 
         private static void CreateRider(GameObject horse)
@@ -103,9 +136,9 @@ namespace HorseParking.Presentation.Editor
             ConfigureRiderAnimationImport();
             var rider = InstantiateAsset(RiderPath, "ClientRider_01");
             rider.transform.SetParent(horse.transform, false);
-            rider.transform.localPosition = new Vector3(0f, 1.02f, -0.2f);
+            ScaleToHeight(rider, 1.7f);
+            rider.transform.localPosition = new Vector3(0f, 1.05f, -0.18f);
             rider.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
-            rider.transform.localScale = Vector3.one * 0.82f;
 
             var animator = rider.GetComponent<Animator>();
             if (animator == null)
@@ -229,24 +262,15 @@ namespace HorseParking.Presentation.Editor
 
         private static void ConfigureRiderAnimationImport()
         {
-            ConfigureRiderModelImport();
-            var riderAvatar = AssetDatabase.LoadAllAssetsAtPath(RiderPath).OfType<Avatar>().FirstOrDefault();
             var importer = AssetImporter.GetAtPath(RiderAnimationPath) as ModelImporter;
-            if (riderAvatar == null || importer == null)
+            if (importer == null)
             {
-                throw new System.InvalidOperationException("X Bot or its Seated Idle animation is missing.");
+                throw new System.InvalidOperationException("Seated Idle animation is missing.");
             }
 
+            importer.importAnimation = true;
             importer.animationType = ModelImporterAnimationType.Human;
-            importer.avatarSetup = ModelImporterAvatarSetup.CopyFromOther;
-            importer.sourceAvatar = riderAvatar;
-            var clips = importer.defaultClipAnimations;
-            foreach (var clip in clips)
-            {
-                clip.loopTime = true;
-            }
-
-            importer.clipAnimations = clips;
+            importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
             importer.SaveAndReimport();
         }
 
@@ -258,6 +282,7 @@ namespace HorseParking.Presentation.Editor
                 throw new System.InvalidOperationException("X Bot model is missing.");
             }
 
+            importer.importAnimation = true;
             importer.animationType = ModelImporterAnimationType.Human;
             importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
             importer.SaveAndReimport();
@@ -269,9 +294,16 @@ namespace HorseParking.Presentation.Editor
             EnsureFolder("Assets/_Project/Presentation/Animation/Controllers");
             AssetDatabase.DeleteAsset(RiderControllerPath);
             var controller = AnimatorController.CreateAnimatorControllerAtPath(RiderControllerPath);
-            var seatedIdle = AssetDatabase.LoadAllAssetsAtPath(RiderAnimationPath)
+            var animationClips = AssetDatabase.LoadAllAssetsAtPath(RiderAnimationPath)
                 .OfType<AnimationClip>()
-                .First(clip => !clip.name.StartsWith("__preview__"));
+                .ToArray();
+            var seatedIdle = animationClips.FirstOrDefault(clip => clip.name == "mixamo.com")
+                ?? animationClips.FirstOrDefault();
+            if (seatedIdle == null)
+            {
+                throw new System.InvalidOperationException(
+                    "Seated Idle imported without a usable clip. Found: " + string.Join(", ", animationClips.Select(clip => clip.name)));
+            }
             var stateMachine = controller.layers[0].stateMachine;
             var state = stateMachine.AddState("SeatedIdle");
             state.motion = seatedIdle;
@@ -313,8 +345,13 @@ namespace HorseParking.Presentation.Editor
 
         private static void PlaceBaseOnGround(GameObject root)
         {
+            PlaceBaseAtHeight(root, groundSurfaceY);
+        }
+
+        private static void PlaceBaseAtHeight(GameObject root, float surfaceY)
+        {
             var bounds = GetBounds(root);
-            root.transform.position -= new Vector3(0f, bounds.min.y, 0f);
+            root.transform.position += new Vector3(0f, surfaceY - bounds.min.y, 0f);
         }
 
         private static Bounds GetBounds(GameObject root)

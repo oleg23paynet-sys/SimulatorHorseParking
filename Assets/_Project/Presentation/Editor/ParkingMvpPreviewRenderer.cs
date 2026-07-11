@@ -10,20 +10,23 @@ namespace HorseParking.Presentation.Editor
     {
         private const string ScenePath = "Assets/_Project/Scenes/ParkingMvp.unity";
         private const string PreviewPath = "Docs/ParkingMvp_Preview.png";
-        private const string RiderAnimationPath = "Assets/_Project/Content/Animations/Characters/Rider/XBot_SeatedIdle.fbx";
+        private const string RiderAnimationPath = "Assets/_Project/Content/Animations/Characters/Rider/MedievalRider/SeatedIdle_Source.fbx";
 
         public static void RenderPreview()
         {
             EditorSceneManager.OpenScene(ScenePath);
             AnimationMode.StartAnimationMode();
             var rider = GameObject.Find("ClientRider_01");
-            var seatedIdle = AssetDatabase.LoadAllAssetsAtPath(RiderAnimationPath)
-                .OfType<AnimationClip>()
-                .First(clip => !clip.name.StartsWith("__preview__"));
-            AnimationMode.SampleAnimationClip(rider, seatedIdle, 0f);
+            if (rider != null)
+            {
+                var seatedIdle = AssetDatabase.LoadAllAssetsAtPath(RiderAnimationPath)
+                    .OfType<AnimationClip>()
+                    .First(clip => !clip.name.StartsWith("__preview__"));
+                AnimationMode.SampleAnimationClip(rider, seatedIdle, 0f);
+            }
             var previewCamera = new GameObject("__PreviewCamera").AddComponent<Camera>();
-            previewCamera.transform.position = new Vector3(14f, 11f, -18f);
-            previewCamera.transform.LookAt(new Vector3(0f, 0f, 2f));
+            previewCamera.transform.position = new Vector3(5f, 3.5f, -6f);
+            previewCamera.transform.LookAt(new Vector3(0f, 1.1f, -1f));
             previewCamera.fieldOfView = 52f;
             previewCamera.clearFlags = CameraClearFlags.Skybox;
 

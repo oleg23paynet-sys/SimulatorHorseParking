@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -6,11 +7,40 @@ namespace HorseParking.Presentation.Editor
 {
     public static class AssetAudit
     {
+        public static void AuditSeatedIdle()
+        {
+            const string animationPath = "Assets/_Project/Content/Animations/Characters/Rider/MedievalRider/SeatedIdle_Source.fbx";
+            var importer = AssetImporter.GetAtPath(animationPath) as ModelImporter;
+            var clips = importer.defaultClipAnimations;
+            Debug.Log("SEATED_AUDIT|defaultClipCount=" + clips.Length + "|allAssetCount=" + AssetDatabase.LoadAllAssetsAtPath(animationPath).Length);
+            foreach (var asset in AssetDatabase.LoadAllAssetsAtPath(animationPath))
+            {
+                Debug.Log("SEATED_AUDIT|asset=" + asset.GetType().Name + "|" + asset.name);
+            }
+        }
+
+        public static void AuditMountedClientMaterials()
+        {
+            const string modelPath = "Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/SM_RedHorseRider.fbx";
+            foreach (var material in AssetDatabase.LoadAllAssetsAtPath(modelPath).OfType<Material>())
+            {
+                var textureName = material.mainTexture == null ? "none" : material.mainTexture.name;
+                Debug.Log("MOUNTED_MATERIAL|" + material.name + "|shader=" + material.shader.name + "|texture=" + textureName);
+            }
+
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(asset);
+            foreach (var renderer in instance.GetComponentsInChildren<Renderer>())
+            {
+                Debug.Log("MOUNTED_RENDERER|" + renderer.name + "|materials=" + string.Join(",", renderer.sharedMaterials.Select(material => material.name)));
+            }
+            UnityEngine.Object.DestroyImmediate(instance);
+        }
+
         private static readonly string[] Paths =
         {
             "Assets/_Project/Content/Models/Environment/ParkingGround/CobblestoneLowpoly/cobblestone.fbx",
-            "Assets/_Project/Content/Models/Characters/Horse/LowPolyHorse/uploads_files_2798555_Horse.fbx",
-            "Assets/_Project/Content/Models/Characters/Rider/X Bot.fbx",
+            "Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/SM_RedHorseRider.fbx",
             "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/blue/building_market_blue.fbx",
             "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/blue/building_lumbermill_blue.fbx",
             "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/neutral/fence_wood_straight_gate.fbx",
