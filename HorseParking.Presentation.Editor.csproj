@@ -55,6 +55,7 @@
     <UnityVersion>6000.5.0f1</UnityVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Analyzer Include="C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\Extensions\Microsoft\Visual Studio Tools for Unity\Analyzers\Microsoft.Unity.Analyzers.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.5.0f1\Editor\Data\Tools\BuildPipeline\Unity.SourceGenerators\Unity.SourceGenerators.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.5.0f1\Editor\Data\Tools\BuildPipeline\Unity.SourceGenerators\Unity.Properties.SourceGenerator.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.5.0f1\Editor\Data\Tools\BuildPipeline\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
@@ -64,8 +65,10 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.5.0f1\Editor\Data\BCLExtensions\TargetingPacks\netstandard2.1\analyzers\dotnet\roslyn4.0\cs\System.Text.Json.SourceGeneration.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\_Project\Presentation\Editor\ParkingMvpPreviewRenderer.cs" />
     <Compile Include="Assets\_Project\Presentation\Editor\ParkingMvpSceneBuilder.cs" />
     <Compile Include="Assets\_Project\Presentation\Editor\BootstrapSceneBuilder.cs" />
+    <Compile Include="Assets\_Project\Presentation\Editor\AssetAudit.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\_Project\Presentation\Editor\HorseParking.Presentation.Editor.asmdef" />

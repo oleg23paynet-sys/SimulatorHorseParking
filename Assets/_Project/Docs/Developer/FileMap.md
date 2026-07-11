@@ -54,6 +54,7 @@
 | Путь | Назначение | Где менять |
 |---|---|---|
 | `Assets/_Project/Presentation/Player/FirstPersonPlayerController.cs` | Первое лицо без рук: движение, обзор мышью, гравитация и raycast взаимодействия. | Настройки скорости/чувствительности находятся в начале файла; не переносить игровую логику в этот Unity-компонент. |
+| `Assets/_Project/Docs/TaskLogs/2026-07-11_bugfix-first-person-camera-reference.txt` | Отчёт об исправлении ошибки запуска `NullReferenceException`. | Причина и проверка исправления. |
 | `Assets/_Project/Presentation/Interaction/DebugInteractionTarget.cs` | Временный технический объект, реализующий IInteractionTarget. | Удалить из Bootstrap после появления реальных адаптеров таблички, шлагбаума и т. п. |
 | `Assets/_Project/Presentation/Editor/BootstrapSceneBuilder.cs` | Команда Unity `Horse Parking -> Build Bootstrap Scene`; создаёт техническую сцену. | Здесь только сборка сцены для проверки, не финальный игровой контент. |
 | `Assets/_Project/Presentation/Editor/HorseParking.Presentation.Editor.asmdef` | Editor-сборка для builder-скриптов. | Добавлять сюда только UnityEditor-код. |
@@ -110,6 +111,22 @@
 | `Assets/_Project/Content/Models/Environment/ParkingGround/CobblestoneLowpoly/cobblestone.fbx` | Готовая площадка парковки. |
 | `Assets/_Project/Content/Models/Characters/Horse/LowPolyHorse/uploads_files_2798555_Horse.fbx` | Лошадь клиента. |
 | `Assets/_Project/Content/Models/Characters/Rider/X Bot.fbx` | Наездник клиента; временный готовый Mixamo character asset. |
+| `Assets/_Project/Content/Materials/Characters/Horse/M_HorseChestnut.mat` | Каштановый материал готовой FBX-лошади. | Менять только цвет/свойства материала, не модель. |
+| `Assets/_Project/Content/Animations/Characters/Rider/XBot_SeatedIdle.fbx` | Готовая Mixamo-анимация сидящего наездника. | Не редактировать вручную; при замене скачивать `FBX for Unity`, `Without Skin`. |
+| `Assets/_Project/Presentation/Animation/Controllers/AC_XBotSeatedIdle.controller` | Animator Controller: единственное состояние готовой анимации `Seated Idle`. | Добавлять новые состояния только из готовых импортированных клипов. |
+| `Assets/_Project/Docs/TaskLogs/2026-07-11_stage-2-01-rider-seated-idle.txt` | Отчёт о подключении наездника. | Текущий итог подзадачи 2.1. |
+| `Assets/_Project/Content/Models/Characters/Horse/CartoonRiggedHorse/` | Бесплатная скачанная FBX-пони. | Сохранена, но не использовать для Parking MVP-клиента. |
+| `Assets/_Project/Content/Models/Characters/Rider/MedievalCharacter/` | Текстурированный средневековый наездник FBX и texture. | Кандидат на замену X Bot. |
+| `Assets/_Project/Content/Animations/Characters/Rider/MedievalRider/` | Готовые FBX `Walk` и `T-Pose` для средневекового наездника. | Привязывать через Humanoid Avatar, не создавать вручную. |
+
+### Current correction status (2026-07-11)
+
+| Path | What to edit / current fact |
+|---|---|
+| `Assets/_Project/Presentation/Editor/ParkingMvpSceneBuilder.cs` | The only source of the ParkingMvp visual layout: coordinates, FBX selection and scale. `CreateParkingZone` owns the one parking slot; `CreateClient` owns only the horse. |
+| `Assets/_Project/Scenes/ParkingMvp.unity` | Generated scene. Do not hand-edit it for layout; change the builder then run `Horse Parking -> Build Parking MVP Scene`. |
+| `Assets/_Project/Content/Models/Characters/Rider/X Bot.fbx` | Kept in content but intentionally hidden until a ready, suitable Mixamo riding animation is supplied. |
+| `Assets/_Project/Docs/TaskLogs/2026-07-11_stage-2-01-visual-correction.txt` | What was corrected and what has not been implemented. |
 
 ## Bootstrap: границы технической сцены
 

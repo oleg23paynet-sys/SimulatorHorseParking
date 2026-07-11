@@ -14,7 +14,8 @@ namespace HorseParking.Presentation.Player
         [SerializeField] private float interactionDistance = 3f;
 
         private CharacterController characterController = null!;
-        private Camera playerCamera = null!;
+        [SerializeField] private Camera playerCamera = null!;
+        [SerializeField] private GameCompositionRoot compositionRoot = null!;
         private InteractWithTargetUseCase interactUseCase = null!;
         private float verticalVelocity;
         private float cameraPitch;
@@ -22,7 +23,7 @@ namespace HorseParking.Presentation.Player
         public void Configure(Camera cameraComponent, GameCompositionRoot compositionRoot)
         {
             playerCamera = cameraComponent;
-            interactUseCase = compositionRoot.InteractWithTargetUseCase;
+            this.compositionRoot = compositionRoot;
         }
 
         private void Awake()
@@ -32,8 +33,27 @@ namespace HorseParking.Presentation.Player
             Cursor.visible = false;
         }
 
+        private void Start()
+        {
+            if (playerCamera == null || compositionRoot == null)
+            {
+                Debug.LogError("First-person player is missing its camera or composition root.", this);
+                enabled = false;
+                return;
+            }
+
+            // The composition root completes Awake before Start. This preserves DI and
+            // prevents the runtime-only reference from being lost when Unity reloads a scene.
+            interactUseCase = compositionRoot.InteractWithTargetUseCase;
+        }
+
         private void Update()
         {
+            if (playerCamera == null)
+            {
+                return;
+            }
+
             HandleLook();
             HandleMovement();
             HandleInteraction();
