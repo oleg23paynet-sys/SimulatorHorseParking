@@ -56,6 +56,7 @@ namespace HorseParking.Presentation.Editor
         private const string WarehousePath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/blue/building_lumbermill_blue.fbx";
         private const string GatePath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/neutral/fence_wood_straight_gate.fbx";
         private const string PaymentPouchPath = "Assets/_Project/Content/Models/Props/PaymentPouch/SM_PaymentPouch.fbx";
+        private const float PaymentPouchCordLength = 0.14f;
         private const string HorseMaterialPath = "Assets/_Project/Content/Materials/Characters/Horse/M_HorseChestnut.mat";
         private const string MountedHorseMaterialPath = "Assets/_Project/Content/Materials/Characters/MountedClients/M_RedHorseRiderHorse.mat";
         private const string MountedHorseTexturePath = "Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/textures/HorseWagonTexture2.png";
@@ -461,6 +462,8 @@ namespace HorseParking.Presentation.Editor
         {
             var head = FindDescendant(horseVisual.transform, "Head");
             var jaw = FindDescendant(horseVisual.transform, "Jaw") ?? head;
+            var leftBridlePoint = FindDescendant(horseVisual.transform, "Reins_Bn_Head_L");
+            var rightBridlePoint = FindDescendant(horseVisual.transform, "Reins_Bn_Head_R");
             if (head == null || jaw == null)
             {
                 throw new System.InvalidOperationException("Horse Animset head/jaw bones were not found for the payment bag.");
@@ -470,10 +473,14 @@ namespace HorseParking.Presentation.Editor
             var mouthDirection = head.position - bounds.center;
             mouthDirection.y = 0f;
             mouthDirection = mouthDirection.sqrMagnitude < 0.001f ? horseVisual.transform.forward : mouthDirection.normalized;
-            var anchor = new GameObject("PaymentBagAnchor_Mouth").transform;
-            // The rig has no dedicated lip/bit bone. Derive the actual mouth point
-            // from the animated Head bone, then parent it to Jaw so it follows both.
-            anchor.position = head.position + (mouthDirection * 0.27f) - (Vector3.up * 0.22f);
+            var anchor = new GameObject("PaymentBagAnchor_BridleLowerPoint").transform;
+            // Use the package's ready bridle/rein attachment bones instead of the
+            // mouth mesh. Their midpoint is the bit; lowering it keeps the knot
+            // outside the lips and lets the pouch hang freely below the chin.
+            var bridleMidpoint = leftBridlePoint != null && rightBridlePoint != null
+                ? Vector3.Lerp(leftBridlePoint.position, rightBridlePoint.position, 0.5f)
+                : head.position + (mouthDirection * 0.27f) - (Vector3.up * 0.22f);
+            anchor.position = bridleMidpoint - (Vector3.up * PaymentPouchCordLength);
             anchor.rotation = Quaternion.LookRotation(mouthDirection, Vector3.up);
             anchor.SetParent(jaw, true);
             return anchor;
@@ -577,6 +584,26 @@ namespace HorseParking.Presentation.Editor
             // offset beneath it, so attaching the root to the mouth makes the pouch
             // hang naturally instead of fastening its whole body to the horse.
             var sack = new GameObject("PaymentSack_01");
+            var cord = new GameObject("PaymentPouchCord");
+            cord.transform.SetParent(sack.transform, false);
+            var cordRenderer = cord.AddComponent<LineRenderer>();
+            cordRenderer.useWorldSpace = false;
+            cordRenderer.positionCount = 2;
+            cordRenderer.SetPosition(0, Vector3.zero);
+            cordRenderer.SetPosition(1, Vector3.up * PaymentPouchCordLength);
+            cordRenderer.startWidth = 0.018f;
+            cordRenderer.endWidth = 0.014f;
+            cordRenderer.numCapVertices = 6;
+            cordRenderer.numCornerVertices = 4;
+            cordRenderer.generateLightingData = true;
+            cordRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            cordRenderer.receiveShadows = false;
+            cordRenderer.sharedMaterial = CreateHorseAnimsetMaterial(
+                "M_PaymentPouchCord",
+                new Color(0.12f, 0.045f, 0.018f),
+                null,
+                null,
+                null);
             var sackVisual = InstantiateAsset(PaymentPouchPath, "PaymentPouchVisual");
             sackVisual.transform.SetParent(sack.transform, false);
             sackVisual.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
