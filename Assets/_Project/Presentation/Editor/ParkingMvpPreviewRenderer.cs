@@ -11,6 +11,7 @@ namespace HorseParking.Presentation.Editor
         private const string ScenePath = "Assets/_Project/Scenes/ParkingMvp.unity";
         private const string PreviewPath = "Docs/ParkingMvp_Preview.png";
         private const string HorseWalkPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/H_Walk.FBX";
+        private const string RiderWalkPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/Rider_Walk.FBX";
 
         public static void RenderPreview()
         {
@@ -25,6 +26,15 @@ namespace HorseParking.Presentation.Editor
                 AnimationMode.SampleAnimationClip(horse, walk, walk.length * 0.35f);
             }
 
+            var rider = GameObject.Find("ClientRider_01");
+            if (rider != null)
+            {
+                var walk = AssetDatabase.LoadAllAssetsAtPath(RiderWalkPath)
+                    .OfType<AnimationClip>()
+                    .First(clip => !clip.name.StartsWith("__preview__"));
+                AnimationMode.SampleAnimationClip(rider, walk, walk.length * 0.35f);
+            }
+
             var bag = GameObject.Find("PaymentSack_01");
             var bagAnchor = GameObject.Find("PaymentBagAnchor_Mouth");
             if (bag != null && bagAnchor != null)
@@ -36,9 +46,9 @@ namespace HorseParking.Presentation.Editor
             }
 
             var previewCamera = new GameObject("__PreviewCamera").AddComponent<Camera>();
-            previewCamera.transform.position = new Vector3(4.8f, 2.7f, -15.5f);
-            previewCamera.transform.LookAt(new Vector3(0f, 1.25f, -12f));
-            previewCamera.fieldOfView = 52f;
+            previewCamera.transform.position = new Vector3(4.1f, 1.9f, -11.6f);
+            previewCamera.transform.LookAt(new Vector3(0f, 1.35f, -12f));
+            previewCamera.fieldOfView = 45f;
             previewCamera.clearFlags = CameraClearFlags.Skybox;
 
             var texture = new RenderTexture(1280, 720, 24);

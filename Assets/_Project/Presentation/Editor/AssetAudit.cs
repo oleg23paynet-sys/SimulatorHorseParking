@@ -39,12 +39,12 @@ namespace HorseParking.Presentation.Editor
 
         private static readonly string[] Paths =
         {
-            "Assets/_Project/Content/Models/Environment/ParkingGround/CobblestoneLowpoly/cobblestone.fbx",
-            "Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/SM_RedHorseRider.fbx",
+            "Assets/_Project/ThirdParty/HorseAnimsetPro/Horse Realistic.FBX",
+            "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/Rider.FBX",
             "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/blue/building_market_blue.fbx",
             "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/blue/building_lumbermill_blue.fbx",
             "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/neutral/fence_wood_straight_gate.fbx",
-            "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/decoration/props/sack.fbx"
+            "Assets/_Project/Content/Models/Props/PaymentPouch/SM_PaymentPouch.fbx"
         };
 
         public static void Run()

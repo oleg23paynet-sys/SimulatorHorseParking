@@ -9,14 +9,14 @@ namespace HorseParking.Presentation.Parking
     /// </summary>
     public sealed class AnimatorMountedClientAnimationAdapter : MonoBehaviour, IMountedClientAnimation
     {
-        [SerializeField] private Animator horseAnimator = null!;
+        [SerializeField] private Animator[] animators = System.Array.Empty<Animator>();
         [SerializeField] private string walkingParameter = "Walking";
 
         private int walkingParameterId;
 
-        public void Configure(Animator animator, string parameterName = "Walking")
+        public void Configure(Animator[] configuredAnimators, string parameterName = "Walking")
         {
-            horseAnimator = animator;
+            animators = configuredAnimators;
             walkingParameter = parameterName;
             walkingParameterId = Animator.StringToHash(walkingParameter);
         }
@@ -24,21 +24,27 @@ namespace HorseParking.Presentation.Parking
         private void Awake()
         {
             walkingParameterId = Animator.StringToHash(walkingParameter);
-            if (horseAnimator == null)
+            if (animators == null || animators.Length == 0)
             {
-                Debug.LogError("Mounted client animation adapter is missing the horse Animator.", this);
+                Debug.LogError("Mounted client animation adapter has no Animators.", this);
                 enabled = false;
             }
         }
 
         public void SetWalking(bool isWalking)
         {
-            if (horseAnimator == null)
+            if (animators == null)
             {
                 return;
             }
 
-            horseAnimator.SetBool(walkingParameterId, isWalking);
+            foreach (var animator in animators)
+            {
+                if (animator != null)
+                {
+                    animator.SetBool(walkingParameterId, isWalking);
+                }
+            }
         }
     }
 }

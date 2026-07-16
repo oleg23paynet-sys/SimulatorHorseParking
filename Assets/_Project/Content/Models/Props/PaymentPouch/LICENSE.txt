@@ -1,0 +1,7 @@
+Coin Pouch by Quaternius
+Source: https://poly.pizza/m/pTZyPTMH88
+License: Creative Commons Zero v1.0 Universal (CC0)
+
+The downloaded GLB was converted to FBX without changing the model design so it
+can follow this project's FBX-only content rule. Its axis and pivot were adjusted
+so the knot sits at the horse mouth and the pouch hangs downward.

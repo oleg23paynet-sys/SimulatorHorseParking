@@ -27,6 +27,13 @@ namespace HorseParking.Presentation.Editor
         private const string HorseAnimsetNormalPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Horse4 Normal.png";
         private const string HorseAnimsetMetallicPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Horse4 MetallicSmoothness.png";
         private const string HorseAnimsetControllerPath = "Assets/_Project/Presentation/Animation/Controllers/AC_HorseAnimsetParkingClient.controller";
+        private const string HorseAnimsetRiderAvatarPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/Rider.FBX";
+        private const string HorseAnimsetRiderIdlePath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/Rider_Idle_01.FBX";
+        private const string HorseAnimsetRiderWalkPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/Rider_Walk.FBX";
+        private const string HorseAnimsetRiderAlbedoPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/Textures/CowBoyDiffuse.png";
+        private const string HorseAnimsetRiderNormalPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/Textures/CowBoyNormal.Png";
+        private const string HorseAnimsetRiderSpecularPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/Textures/CowboySpecularSmoothness.png";
+        private const string HorseAnimsetRiderControllerPath = "Assets/_Project/Presentation/Animation/Controllers/AC_HorseAnimsetMountedRider.controller";
         private const string HorseAnimsetMaterialFolder = "Assets/_Project/Content/Materials/Characters/HorseAnimsetPro";
         private const string TemporaryMountedClientPath = "Assets/_Project/Content/Models/Characters/MountedClients/TemporaryManualV2/SK_ParkingClientMounted_TemporaryV2.fbx";
         private const string TemporaryHorseWalkClipPath = "Assets/_Project/Presentation/Animation/Clips/A_TemporaryHorseWalk_V2.anim";
@@ -48,7 +55,7 @@ namespace HorseParking.Presentation.Editor
         private const string StorePath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/blue/building_market_blue.fbx";
         private const string WarehousePath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/blue/building_lumbermill_blue.fbx";
         private const string GatePath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/neutral/fence_wood_straight_gate.fbx";
-        private const string SackPath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/decoration/props/sack.fbx";
+        private const string PaymentPouchPath = "Assets/_Project/Content/Models/Props/PaymentPouch/SM_PaymentPouch.fbx";
         private const string HorseMaterialPath = "Assets/_Project/Content/Materials/Characters/Horse/M_HorseChestnut.mat";
         private const string MountedHorseMaterialPath = "Assets/_Project/Content/Materials/Characters/MountedClients/M_RedHorseRiderHorse.mat";
         private const string MountedHorseTexturePath = "Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/textures/HorseWagonTexture2.png";
@@ -145,13 +152,12 @@ namespace HorseParking.Presentation.Editor
             animator.applyRootMotion = false;
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
 
-            var adapter = horseVisual.AddComponent<AnimatorMountedClientAnimationAdapter>();
-            adapter.Configure(animator);
-            animationAdapter = adapter;
-
             mountedClient.transform.position = new Vector3(0f, 0f, -12f);
             PlaceHorseFeetOnTerrain(horseVisual);
-            CreateReadySeatedRider(mountedClient, horseVisual);
+            var riderAnimator = CreateReadySeatedRider(mountedClient, horseVisual);
+            var adapter = mountedClient.AddComponent<AnimatorMountedClientAnimationAdapter>();
+            adapter.Configure(new[] { animator, riderAnimator });
+            animationAdapter = adapter;
             paymentBagAnchor = CreatePaymentBagAnchor(horseVisual);
             return mountedClient;
         }
@@ -331,38 +337,124 @@ namespace HorseParking.Presentation.Editor
             return material;
         }
 
-        private static void CreateReadySeatedRider(GameObject mountedClient, GameObject horseVisual)
+        private static Animator CreateReadySeatedRider(GameObject mountedClient, GameObject horseVisual)
         {
-            // This source FBX already contains the approved seated woman. Keep only
-            // her renderers; the old horse/saddle geometry is disabled. The paid HAP
-            // horse below owns all locomotion animation.
-            var rider = InstantiateAsset(MountedClientPath, "ClientRider_01");
+            // The old female mesh had no skeleton and could never follow a riding clip.
+            // The paid HAP rider is a proper Humanoid and is isolated behind the same
+            // animation adapter as the horse, so the visual package remains replaceable.
+            ConfigureHorseAnimsetRiderImports();
+            var rider = InstantiateAsset(HorseAnimsetRiderAvatarPath, "ClientRider_01");
             rider.transform.SetParent(mountedClient.transform, false);
+            var riderMaterial = CreateHorseAnimsetMaterial(
+                "M_HAP_Rider",
+                Color.white,
+                AssetDatabase.LoadAssetAtPath<Texture2D>(HorseAnimsetRiderAlbedoPath),
+                AssetDatabase.LoadAssetAtPath<Texture2D>(HorseAnimsetRiderNormalPath),
+                AssetDatabase.LoadAssetAtPath<Texture2D>(HorseAnimsetRiderSpecularPath));
             foreach (var renderer in rider.GetComponentsInChildren<Renderer>(true))
             {
-                renderer.enabled = renderer.name == "Female" || renderer.name == "Shirt";
+                // Pistols do not belong in the medieval parking demo.
+                renderer.enabled = !renderer.name.StartsWith("Pistol");
+                if (renderer.enabled)
+                {
+                    renderer.sharedMaterial = riderMaterial;
+                }
             }
 
-            ScaleEnabledRenderersToHeight(rider, 1.7f);
+            ScaleEnabledRenderersToHeight(rider, 1.72f);
             var horseBounds = GetEnabledRendererBounds(horseVisual);
             var riderBounds = GetEnabledRendererBounds(rider);
-            var desiredBottom = horseBounds.min.y + 0.62f;
+            // Keep the seated rider above the saddle instead of letting the legs
+            // and pelvis intersect the horse's back.
+            var desiredBottom = horseBounds.min.y + 0.82f;
             rider.transform.position += new Vector3(
                 horseBounds.center.x - riderBounds.center.x,
                 desiredBottom - riderBounds.min.y,
-                horseBounds.center.z - riderBounds.center.z - 0.05f);
+                horseBounds.center.z - riderBounds.center.z - 0.08f);
 
-            var oldAnimator = rider.GetComponent<Animator>();
-            if (oldAnimator != null)
-            {
-                oldAnimator.enabled = false;
-            }
+            var riderAnimator = rider.GetComponent<Animator>() ?? rider.AddComponent<Animator>();
+            riderAnimator.runtimeAnimatorController = GetOrCreateHorseAnimsetRiderController();
+            riderAnimator.applyRootMotion = false;
+            riderAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
 
             var saddleBone = FindDescendant(horseVisual.transform, "Spine2") ?? FindDescendant(horseVisual.transform, "Back");
             if (saddleBone != null)
             {
                 rider.transform.SetParent(saddleBone, true);
             }
+
+            return riderAnimator;
+        }
+
+        private static void ConfigureHorseAnimsetRiderImports()
+        {
+            var sourceImporter = AssetImporter.GetAtPath(HorseAnimsetRiderAvatarPath) as ModelImporter;
+            if (sourceImporter == null)
+            {
+                throw new System.InvalidOperationException("Horse Animset rider avatar is missing: " + HorseAnimsetRiderAvatarPath);
+            }
+
+            sourceImporter.animationType = ModelImporterAnimationType.Human;
+            sourceImporter.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+            sourceImporter.SaveAndReimport();
+            var sourceAvatar = AssetDatabase.LoadAllAssetsAtPath(HorseAnimsetRiderAvatarPath).OfType<Avatar>().FirstOrDefault();
+            if (sourceAvatar == null || !sourceAvatar.isValid || !sourceAvatar.isHuman)
+            {
+                throw new System.InvalidOperationException("Horse Animset rider humanoid avatar is invalid.");
+            }
+
+            ConfigureHorseAnimsetRiderClip(HorseAnimsetRiderIdlePath, sourceAvatar);
+            ConfigureHorseAnimsetRiderClip(HorseAnimsetRiderWalkPath, sourceAvatar);
+        }
+
+        private static void ConfigureHorseAnimsetRiderClip(string path, Avatar sourceAvatar)
+        {
+            var importer = AssetImporter.GetAtPath(path) as ModelImporter;
+            if (importer == null)
+            {
+                throw new System.InvalidOperationException("Horse Animset rider clip is missing: " + path);
+            }
+
+            importer.importAnimation = true;
+            importer.animationType = ModelImporterAnimationType.Human;
+            importer.avatarSetup = ModelImporterAvatarSetup.CopyFromOther;
+            importer.sourceAvatar = sourceAvatar;
+            var clips = importer.defaultClipAnimations;
+            foreach (var clip in clips)
+            {
+                clip.loopTime = true;
+                clip.loopPose = true;
+                clip.keepOriginalPositionXZ = true;
+                clip.keepOriginalPositionY = true;
+            }
+            importer.clipAnimations = clips;
+            importer.SaveAndReimport();
+        }
+
+        private static AnimatorController GetOrCreateHorseAnimsetRiderController()
+        {
+            EnsureFolder("Assets/_Project/Presentation/Animation");
+            EnsureFolder("Assets/_Project/Presentation/Animation/Controllers");
+            AssetDatabase.DeleteAsset(HorseAnimsetRiderControllerPath);
+            var controller = AnimatorController.CreateAnimatorControllerAtPath(HorseAnimsetRiderControllerPath);
+            controller.AddParameter("Walking", AnimatorControllerParameterType.Bool);
+            var stateMachine = controller.layers[0].stateMachine;
+            var idle = stateMachine.AddState("MountedIdle");
+            idle.motion = LoadHorseAnimsetClip(HorseAnimsetRiderIdlePath, "Rider_Idle_01");
+            var walk = stateMachine.AddState("MountedWalk");
+            walk.motion = LoadHorseAnimsetClip(HorseAnimsetRiderWalkPath, "Rider_Walk");
+            stateMachine.defaultState = idle;
+
+            var toWalk = idle.AddTransition(walk);
+            toWalk.AddCondition(AnimatorConditionMode.If, 0f, "Walking");
+            toWalk.hasExitTime = false;
+            toWalk.duration = 0.12f;
+            var toIdle = walk.AddTransition(idle);
+            toIdle.AddCondition(AnimatorConditionMode.IfNot, 0f, "Walking");
+            toIdle.hasExitTime = false;
+            toIdle.duration = 0.12f;
+            AssetDatabase.SaveAssets();
+            return controller;
         }
 
         private static Transform CreatePaymentBagAnchor(GameObject horseVisual)
@@ -379,8 +471,10 @@ namespace HorseParking.Presentation.Editor
             mouthDirection.y = 0f;
             mouthDirection = mouthDirection.sqrMagnitude < 0.001f ? horseVisual.transform.forward : mouthDirection.normalized;
             var anchor = new GameObject("PaymentBagAnchor_Mouth").transform;
-            anchor.position = head.position + (mouthDirection * 0.30f) - (Vector3.up * 0.26f);
-            anchor.rotation = Quaternion.LookRotation(mouthDirection, Vector3.up) * Quaternion.Euler(0f, 0f, 90f);
+            // The rig has no dedicated lip/bit bone. Derive the actual mouth point
+            // from the animated Head bone, then parent it to Jaw so it follows both.
+            anchor.position = head.position + (mouthDirection * 0.27f) - (Vector3.up * 0.22f);
+            anchor.rotation = Quaternion.LookRotation(mouthDirection, Vector3.up);
             anchor.SetParent(jaw, true);
             return anchor;
         }
@@ -479,11 +573,21 @@ namespace HorseParking.Presentation.Editor
             PlaceBaseOnGround(gate);
             AddMeshColliders(gate);
 
-            var sack = InstantiateAsset(SackPath, "PaymentSack_01");
-            ScaleToHeight(sack, 0.10f);
+            // Keep the interaction root at the knot. The FBX visual is rotated and
+            // offset beneath it, so attaching the root to the mouth makes the pouch
+            // hang naturally instead of fastening its whole body to the horse.
+            var sack = new GameObject("PaymentSack_01");
+            var sackVisual = InstantiateAsset(PaymentPouchPath, "PaymentPouchVisual");
+            sackVisual.transform.SetParent(sack.transform, false);
+            sackVisual.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+            ScaleToHeight(sackVisual, 0.18f);
+            var sackBounds = GetEnabledRendererBounds(sackVisual);
+            sackVisual.transform.position += new Vector3(
+                -sackBounds.center.x,
+                -sackBounds.max.y,
+                -sackBounds.center.z);
             sack.transform.position = new Vector3(0.8f, 0.2f, -5f);
-            PlaceBaseOnGround(sack);
-            AddMeshColliders(sack);
+            AddMeshColliders(sackVisual);
             return (gate, sack);
         }
 
