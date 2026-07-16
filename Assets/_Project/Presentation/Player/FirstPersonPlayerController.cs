@@ -9,6 +9,8 @@ namespace HorseParking.Presentation.Player
     public sealed class FirstPersonPlayerController : MonoBehaviour
     {
         [SerializeField] private float moveSpeed = 4f;
+        [SerializeField] private float sprintMultiplier = 1.7f;
+        [SerializeField] private float jumpHeight = 1.1f;
         [SerializeField] private float mouseSensitivity = 2f;
         [SerializeField] private float gravity = -20f;
         [SerializeField] private float interactionDistance = 3f;
@@ -74,11 +76,20 @@ namespace HorseParking.Presentation.Player
         {
             var input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
             var move = (transform.right * input.x) + (transform.forward * input.y);
-            move = Vector3.ClampMagnitude(move, 1f) * moveSpeed;
+            var isSprinting = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            var currentSpeed = isSprinting ? moveSpeed * sprintMultiplier : moveSpeed;
+            move = Vector3.ClampMagnitude(move, 1f) * currentSpeed;
 
-            if (characterController.isGrounded && verticalVelocity < 0f)
+            if (characterController.isGrounded)
             {
-                verticalVelocity = -2f;
+                if (Input.GetKeyDown(KeyCode.Space))
+                {
+                    verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+                }
+                else if (verticalVelocity < 0f)
+                {
+                    verticalVelocity = -2f;
+                }
             }
 
             verticalVelocity += gravity * Time.deltaTime;

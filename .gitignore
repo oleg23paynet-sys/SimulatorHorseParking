@@ -11,6 +11,8 @@ Recordings/
 .vs/
 .vscode/
 
+*.csproj
+*.sln
 *.csproj.user
 *.pidb
 *.booproj
@@ -20,3 +22,37 @@ Recordings/
 .DS_Store
 Thumbs.db
 Docs/
+
+# Developer-only local documentation. Keep it on disk, never commit it.
+Assets/_Project/Docs/
+Assets/_Project/Docs.meta
+
+# Local Unity source archives. Runtime files must be extracted under ThirdParty.
+*.unitypackage
+*.unitypackage.meta
+
+# Disabled packages and obsolete experiment assets kept only as a local archive.
+ThirdPartyDisabled/
+Assets/Malbers Animations/
+Assets/Malbers Animations.meta
+Assets/_Project/Content/AnimationSources/
+Assets/_Project/Content/AnimationSources.meta
+Assets/_Project/Content/Models/Characters/MountedClients/TemporaryManual/
+Assets/_Project/Content/Models/Characters/MountedClients/TemporaryManual.meta
+Assets/_Project/Content/Models/Characters/MountedClients/TemporaryManualV2/
+Assets/_Project/Content/Models/Characters/MountedClients/TemporaryManualV2.meta
+Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/VoxelKnights/
+Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/VoxelKnights.meta
+Assets/_Project/Content/Materials/Characters/VoxelKnights/
+Assets/_Project/Content/Materials/Characters/VoxelKnights.meta
+Assets/_Project/Content/Materials/Characters/MountedClients/M_CompositionPreviewHorse.mat*
+Assets/_Project/Presentation/Animation/Clips/
+Assets/_Project/Presentation/Animation/Clips.meta
+Assets/_Project/Presentation/Animation/Controllers/AC_VoxelHorse.controller*
+Assets/_Project/Presentation/Animation/Controllers/AC_VoxelKnightMounted.controller*
+Assets/_Project/Presentation/Editor/HorseRiderCompositionPreviewBuilder.cs*
+Assets/_Project/Scenes/HorseAnimsetRidingPreview/
+Assets/_Project/Scenes/HorseAnimsetRidingPreview.meta
+Assets/_Project/Scenes/HorseRiderCompositionPreview.unity*
+Tools/CreateTemporaryMountedClientRigV2.py
+Tools/ListBlendAnimations.py

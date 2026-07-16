@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using HorseParking.Application.Interaction;
+using HorseParking.Application.Parking;
 using HorseParking.Core.Localization;
+using HorseParking.Core.Parking;
 using HorseParking.Core.Randomness;
 using HorseParking.Core.Time;
 using HorseParking.Infrastructure.Localization;
@@ -20,6 +22,7 @@ namespace HorseParking.Presentation.Composition
         private IGameClock gameClock = null!;
         private IRandomSource randomSource = null!;
         private InteractWithTargetUseCase interactWithTargetUseCase = null!;
+        private ParkingLifecycleUseCase parkingLifecycleUseCase = null!;
 
         public ILocalizationService LocalizationService => localizationService;
 
@@ -28,6 +31,9 @@ namespace HorseParking.Presentation.Composition
         public IRandomSource RandomSource => randomSource;
 
         public InteractWithTargetUseCase InteractWithTargetUseCase => interactWithTargetUseCase;
+
+        /// <summary>Injected application boundary for the single-slot parking MVP.</summary>
+        public ParkingLifecycleUseCase ParkingLifecycleUseCase => parkingLifecycleUseCase;
 
         private void Awake()
         {
@@ -40,6 +46,9 @@ namespace HorseParking.Presentation.Composition
             gameClock = new StopwatchGameClock();
             randomSource = new SeededRandomSource(12345);
             interactWithTargetUseCase = new InteractWithTargetUseCase();
+            var parkingSlot = new ParkingSlot("parking-slot-01");
+            var tariff = new ParkingTariff(billingPeriodSeconds: 20d, goldPerPeriod: 3);
+            parkingLifecycleUseCase = new ParkingLifecycleUseCase(parkingSlot, tariff, gameClock);
         }
     }
 }

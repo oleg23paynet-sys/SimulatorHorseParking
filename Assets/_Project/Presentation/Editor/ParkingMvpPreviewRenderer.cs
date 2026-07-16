@@ -10,23 +10,34 @@ namespace HorseParking.Presentation.Editor
     {
         private const string ScenePath = "Assets/_Project/Scenes/ParkingMvp.unity";
         private const string PreviewPath = "Docs/ParkingMvp_Preview.png";
-        private const string RiderAnimationPath = "Assets/_Project/Content/Animations/Characters/Rider/MedievalRider/SeatedIdle_Source.fbx";
+        private const string HorseWalkPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/H_Walk.FBX";
 
         public static void RenderPreview()
         {
             EditorSceneManager.OpenScene(ScenePath);
             AnimationMode.StartAnimationMode();
-            var rider = GameObject.Find("ClientRider_01");
-            if (rider != null)
+            var horse = GameObject.Find("HorseAnimsetPro_Visual");
+            if (horse != null)
             {
-                var seatedIdle = AssetDatabase.LoadAllAssetsAtPath(RiderAnimationPath)
+                var walk = AssetDatabase.LoadAllAssetsAtPath(HorseWalkPath)
                     .OfType<AnimationClip>()
                     .First(clip => !clip.name.StartsWith("__preview__"));
-                AnimationMode.SampleAnimationClip(rider, seatedIdle, 0f);
+                AnimationMode.SampleAnimationClip(horse, walk, walk.length * 0.35f);
             }
+
+            var bag = GameObject.Find("PaymentSack_01");
+            var bagAnchor = GameObject.Find("PaymentBagAnchor_Mouth");
+            if (bag != null && bagAnchor != null)
+            {
+                bag.transform.SetParent(bagAnchor.transform, true);
+                bag.transform.position = bagAnchor.transform.position;
+                bag.transform.rotation = bagAnchor.transform.rotation;
+                bag.SetActive(true);
+            }
+
             var previewCamera = new GameObject("__PreviewCamera").AddComponent<Camera>();
-            previewCamera.transform.position = new Vector3(5f, 3.5f, -6f);
-            previewCamera.transform.LookAt(new Vector3(0f, 1.1f, -1f));
+            previewCamera.transform.position = new Vector3(4.8f, 2.7f, -15.5f);
+            previewCamera.transform.LookAt(new Vector3(0f, 1.25f, -12f));
             previewCamera.fieldOfView = 52f;
             previewCamera.clearFlags = CameraClearFlags.Skybox;
 

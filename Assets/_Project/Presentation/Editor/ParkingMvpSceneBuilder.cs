@@ -1,6 +1,8 @@
 using System.Linq;
+using System.Collections.Generic;
 using HorseParking.Presentation.Composition;
 using HorseParking.Presentation.Player;
+using HorseParking.Presentation.Parking;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
@@ -13,8 +15,32 @@ namespace HorseParking.Presentation.Editor
     {
         private static float groundSurfaceY;
         private const string ScenePath = "Assets/_Project/Scenes/ParkingMvp.unity";
-        private const string GroundPath = "Assets/_Project/Content/Models/Environment/ParkingGround/CobblestoneLowpoly/cobblestone.fbx";
+        private const string TerrainDataPath = "Assets/_Project/Content/Terrain/TerrainData_ParkingMvp.asset";
+        private const string TerrainLayerPath = "Assets/_Project/Content/Terrain/TerrainLayer_ParkingMvpCobblestone.terrainlayer";
+        private const string TerrainTexturePath = "Assets/_Project/Content/Models/Environment/ParkingGround/CobblestoneLowpoly/0.jpg";
         private const string MountedClientPath = "Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/SM_RedHorseRider.fbx";
+        private const string HorseAnimsetModelPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Horse Realistic.FBX";
+        private const string HorseAnimsetAvatarPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Horse_A.fbx";
+        private const string HorseAnimsetIdlePath = "Assets/_Project/ThirdParty/HorseAnimsetPro/H_Idle_01.FBX";
+        private const string HorseAnimsetWalkPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/H_Walk.FBX";
+        private const string HorseAnimsetAlbedoPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Horse4 Albedo Brown.png";
+        private const string HorseAnimsetNormalPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Horse4 Normal.png";
+        private const string HorseAnimsetMetallicPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Horse4 MetallicSmoothness.png";
+        private const string HorseAnimsetControllerPath = "Assets/_Project/Presentation/Animation/Controllers/AC_HorseAnimsetParkingClient.controller";
+        private const string HorseAnimsetMaterialFolder = "Assets/_Project/Content/Materials/Characters/HorseAnimsetPro";
+        private const string TemporaryMountedClientPath = "Assets/_Project/Content/Models/Characters/MountedClients/TemporaryManualV2/SK_ParkingClientMounted_TemporaryV2.fbx";
+        private const string TemporaryHorseWalkClipPath = "Assets/_Project/Presentation/Animation/Clips/A_TemporaryHorseWalk_V2.anim";
+        private const string VoxelHorsePath = "Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/VoxelKnights/Voxel Knights/FBX/Animal/TVS_VoxelKnights_Horse.fbx";
+        private const string VoxelKnightPath = "Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/VoxelKnights/Voxel Knights/FBX/Characters/TVS_VoxelKnights_Knight.fbx";
+        private const string VoxelHorseIdlePath = "Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/VoxelKnights/Voxel Knights/Animations/Animals/Horse_Idle_Anim.fbx";
+        private const string VoxelHorseWalkPath = "Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/VoxelKnights/Voxel Knights/Animations/Animals/Horse_Walk_Anim.fbx";
+        private const string VoxelRiderMountedPath = "Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/VoxelKnights/Voxel Knights/Animations/Humans/Human_Mounted_Anim.fbx";
+        private const string VoxelHorseTexturePath = "Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/VoxelKnights/Voxel Knights/Textures/Animals/TVS_VoxelKnights_Horse_Texture.png";
+        private const string VoxelKnightTexturePath = "Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/VoxelKnights/Voxel Knights/Textures/Characters/TVS_VoxelKnights_Knight_Texture.png";
+        private const string VoxelHorseControllerPath = "Assets/_Project/Presentation/Animation/Controllers/AC_VoxelHorse.controller";
+        private const string VoxelRiderControllerPath = "Assets/_Project/Presentation/Animation/Controllers/AC_VoxelKnightMounted.controller";
+        private const string VoxelHorseMaterialPath = "Assets/_Project/Content/Materials/Characters/VoxelKnights/M_VoxelHorse.mat";
+        private const string VoxelKnightMaterialPath = "Assets/_Project/Content/Materials/Characters/VoxelKnights/M_VoxelKnight.mat";
         private const string AdultHorsePath = "Assets/_Project/Content/Models/Characters/Horse/AdultTexturedHorse/uploads_files_2751214_horse.fbx";
         private const string RiderPath = "Assets/_Project/Content/Models/Characters/Rider/MedievalCharacter/SM_MedievalRider.fbx";
         private const string RiderAnimationPath = "Assets/_Project/Content/Animations/Characters/Rider/MedievalRider/SeatedIdle_Source.fbx";
@@ -36,8 +62,9 @@ namespace HorseParking.Presentation.Editor
             CreatePlayer(compositionRoot);
             CreateGround();
             CreateParkingZone();
-            CreateClient();
-            CreateExitAndPayment();
+            var client = CreateClient(out var animationAdapter, out var paymentBagAnchor);
+            var exitAndPayment = CreateExitAndPayment();
+            CreateParkingRuntime(compositionRoot, client, animationAdapter, paymentBagAnchor, exitAndPayment.gate, exitAndPayment.sack);
             CreateOperationsBuildings();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -75,11 +102,23 @@ namespace HorseParking.Presentation.Editor
 
         private static void CreateGround()
         {
-            var ground = InstantiateAsset(GroundPath, "ParkingGround_Cobblestone");
-            ScaleToHorizontalLength(ground, 30f);
-            PlaceBaseAtHeight(ground, 0f);
-            groundSurfaceY = GetBounds(ground).max.y;
-            AddGroundCollider(ground);
+            EnsureFolder("Assets/_Project/Content");
+            EnsureFolder("Assets/_Project/Content/Terrain");
+            AssetDatabase.DeleteAsset(TerrainDataPath);
+            AssetDatabase.DeleteAsset(TerrainLayerPath);
+            var terrainData = new TerrainData
+            {
+                heightmapResolution = 33,
+                size = new Vector3(40f, 3f, 40f)
+            };
+            terrainData.SetHeights(0, 0, new float[33, 33]);
+            terrainData.terrainLayers = new[] { CreateGroundTerrainLayer() };
+            AssetDatabase.CreateAsset(terrainData, TerrainDataPath);
+
+            var terrainObject = Terrain.CreateTerrainGameObject(terrainData);
+            terrainObject.name = "ParkingTerrain_40x40";
+            terrainObject.transform.position = new Vector3(-20f, 0f, -20f);
+            groundSurfaceY = terrainObject.transform.position.y + terrainData.GetInterpolatedHeight(0.5f, 0.5f);
         }
 
         private static void CreateParkingZone()
@@ -92,23 +131,304 @@ namespace HorseParking.Presentation.Editor
             CreateParkingFence("ParkingSlot_01_BackFence", new Vector3(0f, 0f, 1.1f), 0f);
         }
 
-        private static void CreateClient()
+        private static GameObject CreateClient(out MonoBehaviour animationAdapter, out Transform paymentBagAnchor)
         {
-            var horse = InstantiateAsset(AdultHorsePath, "ClientHorse_01");
-            ScaleToHeight(horse, 1.65f);
-            horse.transform.position = new Vector3(0f, 0f, -1f);
-            PlaceBaseOnGround(horse);
-            AddMeshColliders(horse);
+            var mountedClient = new GameObject("ClientMountedHorseRider_01");
+            ConfigureHorseAnimsetImports();
+            var horseVisual = InstantiateAsset(HorseAnimsetModelPath, "HorseAnimsetPro_Visual");
+            horseVisual.transform.SetParent(mountedClient.transform, false);
+            ConfigureHorseAnimsetRenderers(horseVisual);
+            ScaleToHeight(horseVisual, 2.25f);
+
+            var animator = horseVisual.GetComponent<Animator>() ?? horseVisual.AddComponent<Animator>();
+            animator.runtimeAnimatorController = GetOrCreateHorseAnimsetController();
+            animator.applyRootMotion = false;
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+
+            var adapter = horseVisual.AddComponent<AnimatorMountedClientAnimationAdapter>();
+            adapter.Configure(animator);
+            animationAdapter = adapter;
+
+            mountedClient.transform.position = new Vector3(0f, 0f, -12f);
+            PlaceHorseFeetOnTerrain(horseVisual);
+            CreateReadySeatedRider(mountedClient, horseVisual);
+            paymentBagAnchor = CreatePaymentBagAnchor(horseVisual);
+            return mountedClient;
+        }
+
+        private static void ConfigureHorseAnimsetImports()
+        {
+            var avatarImporter = AssetImporter.GetAtPath(HorseAnimsetAvatarPath) as ModelImporter;
+            if (avatarImporter == null)
+            {
+                throw new System.InvalidOperationException("Horse Animset source avatar is missing: " + HorseAnimsetAvatarPath);
+            }
+
+            avatarImporter.animationType = ModelImporterAnimationType.Generic;
+            avatarImporter.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+            avatarImporter.SaveAndReimport();
+            var sourceAvatar = AssetDatabase.LoadAllAssetsAtPath(HorseAnimsetAvatarPath).OfType<Avatar>().FirstOrDefault();
+            if (sourceAvatar == null)
+            {
+                throw new System.InvalidOperationException("Horse Animset source avatar did not import.");
+            }
+
+            ConfigureHorseModelImporter(HorseAnimsetModelPath, ModelImporterAvatarSetup.CreateFromThisModel, null, false);
+            ConfigureHorseModelImporter(HorseAnimsetIdlePath, ModelImporterAvatarSetup.CopyFromOther, sourceAvatar, true);
+            ConfigureHorseModelImporter(HorseAnimsetWalkPath, ModelImporterAvatarSetup.CopyFromOther, sourceAvatar, true);
+        }
+
+        private static void ConfigureHorseModelImporter(string path, ModelImporterAvatarSetup avatarSetup, Avatar sourceAvatar, bool loop)
+        {
+            var importer = AssetImporter.GetAtPath(path) as ModelImporter;
+            if (importer == null)
+            {
+                throw new System.InvalidOperationException("Horse Animset asset is missing: " + path);
+            }
+
+            importer.importAnimation = true;
+            importer.animationType = ModelImporterAnimationType.Generic;
+            importer.avatarSetup = avatarSetup;
+            if (sourceAvatar != null)
+            {
+                importer.sourceAvatar = sourceAvatar;
+            }
+
+            if (loop)
+            {
+                var clips = importer.defaultClipAnimations;
+                foreach (var clip in clips)
+                {
+                    clip.loopTime = true;
+                    clip.loopPose = true;
+                    clip.keepOriginalPositionXZ = true;
+                    clip.keepOriginalPositionY = true;
+                }
+
+                importer.clipAnimations = clips;
+            }
+
+            importer.SaveAndReimport();
+        }
+
+        private static AnimatorController GetOrCreateHorseAnimsetController()
+        {
+            EnsureFolder("Assets/_Project/Presentation/Animation");
+            EnsureFolder("Assets/_Project/Presentation/Animation/Controllers");
+            AssetDatabase.DeleteAsset(HorseAnimsetControllerPath);
+            var controller = AnimatorController.CreateAnimatorControllerAtPath(HorseAnimsetControllerPath);
+            controller.AddParameter("Walking", AnimatorControllerParameterType.Bool);
+            var stateMachine = controller.layers[0].stateMachine;
+            var idle = stateMachine.AddState("Idle");
+            idle.motion = LoadHorseAnimsetClip(HorseAnimsetIdlePath, "H_Idle_01");
+            var walk = stateMachine.AddState("Walk");
+            walk.motion = LoadHorseAnimsetClip(HorseAnimsetWalkPath, "H_Walk");
+            stateMachine.defaultState = idle;
+
+            var toWalk = idle.AddTransition(walk);
+            toWalk.AddCondition(AnimatorConditionMode.If, 0f, "Walking");
+            toWalk.hasExitTime = false;
+            toWalk.duration = 0.12f;
+            var toIdle = walk.AddTransition(idle);
+            toIdle.AddCondition(AnimatorConditionMode.IfNot, 0f, "Walking");
+            toIdle.hasExitTime = false;
+            toIdle.duration = 0.12f;
+            AssetDatabase.SaveAssets();
+            return controller;
+        }
+
+        private static AnimationClip LoadHorseAnimsetClip(string path, string preferredName)
+        {
+            var clips = AssetDatabase.LoadAllAssetsAtPath(path)
+                .OfType<AnimationClip>()
+                .Where(clip => !clip.name.StartsWith("__preview__"))
+                .ToArray();
+            var clip = clips.FirstOrDefault(candidate => candidate.name == preferredName) ?? clips.FirstOrDefault();
+            if (clip == null)
+            {
+                throw new System.InvalidOperationException("Horse Animset clip did not import from " + path);
+            }
+
+            return clip;
+        }
+
+        private static void ConfigureHorseAnimsetRenderers(GameObject horseVisual)
+        {
+            var enabledNames = new HashSet<string>
+            {
+                "Horse Body", "Horse Eyes", "Horse Mane1", "Horse Tail", "Saddle", "Reins"
+            };
+            foreach (var renderer in horseVisual.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.enabled = enabledNames.Contains(renderer.name);
+            }
+
+            if (!horseVisual.GetComponentsInChildren<Renderer>(true).Any(renderer => renderer.enabled && renderer.name == "Horse Body"))
+            {
+                throw new System.InvalidOperationException("Horse Animset realistic body renderer was not found.");
+            }
+
+            ApplyHorseAnimsetMaterials(horseVisual);
+        }
+
+        private static void ApplyHorseAnimsetMaterials(GameObject horseVisual)
+        {
+            EnsureFolder("Assets/_Project/Content/Materials");
+            EnsureFolder("Assets/_Project/Content/Materials/Characters");
+            EnsureFolder(HorseAnimsetMaterialFolder);
+            var albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(HorseAnimsetAlbedoPath);
+            var normal = AssetDatabase.LoadAssetAtPath<Texture2D>(HorseAnimsetNormalPath);
+            var metallic = AssetDatabase.LoadAssetAtPath<Texture2D>(HorseAnimsetMetallicPath);
+            if (albedo == null || normal == null || metallic == null)
+            {
+                throw new System.InvalidOperationException("Horse Animset textures are missing.");
+            }
+
+            var body = CreateHorseAnimsetMaterial("M_HAP_HorseBody", new Color(0.42f, 0.19f, 0.08f), albedo, normal, metallic);
+            var darkHair = CreateHorseAnimsetMaterial("M_HAP_HorseHair", new Color(0.035f, 0.025f, 0.02f), null, null, null);
+            var leather = CreateHorseAnimsetMaterial("M_HAP_Leather", new Color(0.16f, 0.055f, 0.02f), null, null, null);
+            var eyes = CreateHorseAnimsetMaterial("M_HAP_Eyes", new Color(0.01f, 0.008f, 0.006f), null, null, null);
+            foreach (var renderer in horseVisual.GetComponentsInChildren<Renderer>(true).Where(renderer => renderer.enabled))
+            {
+                if (renderer.name == "Horse Body") renderer.sharedMaterial = body;
+                else if (renderer.name == "Horse Eyes") renderer.sharedMaterial = eyes;
+                else if (renderer.name.Contains("Mane") || renderer.name.Contains("Tail")) renderer.sharedMaterial = darkHair;
+                else renderer.sharedMaterial = leather;
+            }
+        }
+
+        private static Material CreateHorseAnimsetMaterial(string name, Color color, Texture2D albedo, Texture2D normal, Texture2D metallic)
+        {
+            var path = HorseAnimsetMaterialFolder + "/" + name + ".mat";
+            AssetDatabase.DeleteAsset(path);
+            // ParkingMvp currently uses the Built-in Render Pipeline. Selecting the
+            // installed-but-inactive URP shader would render the horse magenta.
+            var shader = Shader.Find("Standard");
+            if (shader == null)
+            {
+                throw new System.InvalidOperationException("Built-in Standard shader is unavailable.");
+            }
+            var material = new Material(shader) { name = name };
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+            if (material.HasProperty("_Color")) material.SetColor("_Color", color);
+            if (albedo != null)
+            {
+                if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", albedo);
+                if (material.HasProperty("_MainTex")) material.SetTexture("_MainTex", albedo);
+            }
+            if (normal != null && material.HasProperty("_BumpMap"))
+            {
+                material.SetTexture("_BumpMap", normal);
+                material.EnableKeyword("_NORMALMAP");
+            }
+            if (metallic != null && material.HasProperty("_MetallicGlossMap"))
+            {
+                material.SetTexture("_MetallicGlossMap", metallic);
+                material.EnableKeyword("_METALLICSPECGLOSSMAP");
+            }
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.32f);
+            AssetDatabase.CreateAsset(material, path);
+            return material;
+        }
+
+        private static void CreateReadySeatedRider(GameObject mountedClient, GameObject horseVisual)
+        {
+            // This source FBX already contains the approved seated woman. Keep only
+            // her renderers; the old horse/saddle geometry is disabled. The paid HAP
+            // horse below owns all locomotion animation.
+            var rider = InstantiateAsset(MountedClientPath, "ClientRider_01");
+            rider.transform.SetParent(mountedClient.transform, false);
+            foreach (var renderer in rider.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.enabled = renderer.name == "Female" || renderer.name == "Shirt";
+            }
+
+            ScaleEnabledRenderersToHeight(rider, 1.7f);
+            var horseBounds = GetEnabledRendererBounds(horseVisual);
+            var riderBounds = GetEnabledRendererBounds(rider);
+            var desiredBottom = horseBounds.min.y + 0.62f;
+            rider.transform.position += new Vector3(
+                horseBounds.center.x - riderBounds.center.x,
+                desiredBottom - riderBounds.min.y,
+                horseBounds.center.z - riderBounds.center.z - 0.05f);
+
+            var oldAnimator = rider.GetComponent<Animator>();
+            if (oldAnimator != null)
+            {
+                oldAnimator.enabled = false;
+            }
+
+            var saddleBone = FindDescendant(horseVisual.transform, "Spine2") ?? FindDescendant(horseVisual.transform, "Back");
+            if (saddleBone != null)
+            {
+                rider.transform.SetParent(saddleBone, true);
+            }
+        }
+
+        private static Transform CreatePaymentBagAnchor(GameObject horseVisual)
+        {
+            var head = FindDescendant(horseVisual.transform, "Head");
+            var jaw = FindDescendant(horseVisual.transform, "Jaw") ?? head;
+            if (head == null || jaw == null)
+            {
+                throw new System.InvalidOperationException("Horse Animset head/jaw bones were not found for the payment bag.");
+            }
+
+            var bounds = GetEnabledRendererBounds(horseVisual);
+            var mouthDirection = head.position - bounds.center;
+            mouthDirection.y = 0f;
+            mouthDirection = mouthDirection.sqrMagnitude < 0.001f ? horseVisual.transform.forward : mouthDirection.normalized;
+            var anchor = new GameObject("PaymentBagAnchor_Mouth").transform;
+            anchor.position = head.position + (mouthDirection * 0.30f) - (Vector3.up * 0.26f);
+            anchor.rotation = Quaternion.LookRotation(mouthDirection, Vector3.up) * Quaternion.Euler(0f, 0f, 90f);
+            anchor.SetParent(jaw, true);
+            return anchor;
+        }
+
+        private static Transform FindDescendant(Transform root, string name)
+        {
+            return root.GetComponentsInChildren<Transform>(true).FirstOrDefault(child => child.name == name);
+        }
+
+        private static Bounds GetEnabledRendererBounds(GameObject root)
+        {
+            var renderers = root.GetComponentsInChildren<Renderer>(true).Where(renderer => renderer.enabled).ToArray();
+            if (renderers.Length == 0)
+            {
+                throw new System.InvalidOperationException("No enabled renderers found on " + root.name);
+            }
+
+            var bounds = renderers[0].bounds;
+            for (var index = 1; index < renderers.Length; index++) bounds.Encapsulate(renderers[index].bounds);
+            return bounds;
+        }
+
+        private static void ScaleEnabledRenderersToHeight(GameObject root, float desiredHeight)
+        {
+            var bounds = GetEnabledRendererBounds(root);
+            root.transform.localScale *= desiredHeight / bounds.size.y;
         }
 
         private static void ApplyMountedHorseMaterial(GameObject mountedClient)
         {
+            var sourcePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(MountedClientPath);
             var horseRenderer = mountedClient.GetComponentsInChildren<Renderer>()
                 .FirstOrDefault(renderer => renderer.name == "Horse");
             var horseTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(MountedHorseTexturePath);
-            if (horseRenderer == null || horseTexture == null)
+            if (sourcePrefab == null || horseRenderer == null || horseTexture == null)
             {
                 throw new System.InvalidOperationException("Mounted horse material or texture is missing.");
+            }
+
+            var sourceMaterials = sourcePrefab.GetComponentsInChildren<Renderer>()
+                .GroupBy(renderer => renderer.name)
+                .ToDictionary(group => group.Key, group => group.First().sharedMaterials);
+            foreach (var renderer in mountedClient.GetComponentsInChildren<Renderer>())
+            {
+                if (sourceMaterials.TryGetValue(renderer.name, out var materials))
+                {
+                    renderer.sharedMaterials = materials;
+                }
             }
 
             EnsureFolder("Assets/_Project/Content/Materials");
@@ -150,19 +470,139 @@ namespace HorseParking.Presentation.Editor
             animator.applyRootMotion = false;
         }
 
-        private static void CreateExitAndPayment()
+        private static (GameObject gate, GameObject sack) CreateExitAndPayment()
         {
             var gate = InstantiateAsset(GatePath, "ExitGate_01");
             ScaleToHeight(gate, 2.2f);
-            gate.transform.position = new Vector3(0f, 0f, 10f);
+            gate.transform.position = new Vector3(0f, 0f, -5.5f);
             gate.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
             PlaceBaseOnGround(gate);
             AddMeshColliders(gate);
 
             var sack = InstantiateAsset(SackPath, "PaymentSack_01");
-            ScaleToHeight(sack, 0.35f);
-            sack.transform.position = new Vector3(0.8f, 0.2f, 8.5f);
+            ScaleToHeight(sack, 0.10f);
+            sack.transform.position = new Vector3(0.8f, 0.2f, -5f);
             PlaceBaseOnGround(sack);
+            AddMeshColliders(sack);
+            return (gate, sack);
+        }
+
+        private static void CreateParkingRuntime(GameCompositionRoot compositionRoot, GameObject client, MonoBehaviour animationAdapter, Transform paymentBagAnchor, GameObject gate, GameObject sack)
+        {
+            var runtimeObject = new GameObject("ParkingMvpRuntime");
+            var runtime = runtimeObject.AddComponent<ParkingMvpRuntimeController>();
+            var entryLanePoint = new GameObject("ClientEntryLanePoint_01");
+            entryLanePoint.transform.position = new Vector3(0f, groundSurfaceY, -5.5f);
+            var parkingPoint = new GameObject("ClientParkingPoint_01");
+            parkingPoint.transform.position = new Vector3(0f, groundSurfaceY, -1f);
+            var paymentPoint = new GameObject("ClientPaymentPoint_01");
+            paymentPoint.transform.position = new Vector3(0f, groundSurfaceY, -4.25f);
+            var exitPoint = new GameObject("ClientExitPoint_01");
+            exitPoint.transform.position = new Vector3(0f, groundSurfaceY, -14f);
+            var route = client.AddComponent<MountedClientRoutePresenter>();
+            route.Configure(client.transform, entryLanePoint.transform, parkingPoint.transform, paymentPoint.transform, exitPoint.transform, animationAdapter, runtime.NotifyClientParked, runtime.NotifyClientAtPaymentGate, runtime.NotifyClientExited);
+            runtime.Configure(compositionRoot, client, sack, route, paymentBagAnchor);
+
+            var sackTarget = sack.AddComponent<ParkingPaymentBagInteractionTarget>();
+            sackTarget.Configure(runtime);
+            var gateTarget = gate.AddComponent<ParkingExitGateInteractionTarget>();
+            gateTarget.Configure(runtime);
+        }
+
+        private static AnimatorController GetOrCreateVoxelHorseController()
+        {
+            EnsureFolder("Assets/_Project/Presentation/Animation");
+            EnsureFolder("Assets/_Project/Presentation/Animation/Controllers");
+            AssetDatabase.DeleteAsset(VoxelHorseControllerPath);
+            var controller = AnimatorController.CreateAnimatorControllerAtPath(VoxelHorseControllerPath);
+            controller.AddParameter("Walking", AnimatorControllerParameterType.Bool);
+            var stateMachine = controller.layers[0].stateMachine;
+            var idle = stateMachine.AddState("Idle");
+            idle.motion = GetFirstAnimationClip(VoxelHorseIdlePath);
+            var walk = stateMachine.AddState("Walk");
+            walk.motion = GetFirstAnimationClip(VoxelHorseWalkPath);
+            stateMachine.defaultState = idle;
+            var toWalk = idle.AddTransition(walk);
+            toWalk.AddCondition(AnimatorConditionMode.If, 0f, "Walking");
+            toWalk.hasExitTime = false;
+            toWalk.duration = 0.1f;
+            var toIdle = walk.AddTransition(idle);
+            toIdle.AddCondition(AnimatorConditionMode.IfNot, 0f, "Walking");
+            toIdle.hasExitTime = false;
+            toIdle.duration = 0.1f;
+            AssetDatabase.SaveAssets();
+            return controller;
+        }
+
+        private static AnimatorController GetOrCreateVoxelRiderController()
+        {
+            EnsureFolder("Assets/_Project/Presentation/Animation");
+            EnsureFolder("Assets/_Project/Presentation/Animation/Controllers");
+            AssetDatabase.DeleteAsset(VoxelRiderControllerPath);
+            var controller = AnimatorController.CreateAnimatorControllerAtPath(VoxelRiderControllerPath);
+            var state = controller.layers[0].stateMachine.AddState("Mounted");
+            state.motion = GetFirstAnimationClip(VoxelRiderMountedPath);
+            controller.layers[0].stateMachine.defaultState = state;
+            AssetDatabase.SaveAssets();
+            return controller;
+        }
+
+        private static AnimationClip GetFirstAnimationClip(string path)
+        {
+            ConfigureLoopingAnimation(path);
+            var clip = AssetDatabase.LoadAllAssetsAtPath(path)
+                .OfType<AnimationClip>()
+                .FirstOrDefault(candidate => !candidate.name.StartsWith("__preview__"));
+            if (clip == null)
+            {
+                throw new System.InvalidOperationException("No animation clip found in " + path);
+            }
+
+            return clip;
+        }
+
+        private static void ConfigureLoopingAnimation(string path)
+        {
+            var importer = AssetImporter.GetAtPath(path) as ModelImporter;
+            if (importer == null)
+            {
+                throw new System.InvalidOperationException("Animation importer is missing: " + path);
+            }
+
+            var clips = importer.defaultClipAnimations;
+            foreach (var clip in clips)
+            {
+                clip.loopTime = true;
+                clip.loopPose = true;
+            }
+
+            importer.clipAnimations = clips;
+            importer.SaveAndReimport();
+        }
+
+        private static void ApplyVoxelMaterial(GameObject root, string texturePath, string materialPath, string materialName)
+        {
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
+            var sourceMaterial = AssetDatabase.LoadAssetAtPath<Material>(MountedHorseMaterialPath);
+            if (texture == null || sourceMaterial == null)
+            {
+                throw new System.InvalidOperationException("Voxel texture or compatible Standard material is missing for " + materialName);
+            }
+
+            EnsureFolder("Assets/_Project/Content/Materials");
+            EnsureFolder("Assets/_Project/Content/Materials/Characters");
+            EnsureFolder("Assets/_Project/Content/Materials/Characters/VoxelKnights");
+            AssetDatabase.DeleteAsset(materialPath);
+            // This project currently renders its existing FBX assets through the built-in
+            // Standard shader. Reusing that known-good material avoids magenta URP errors.
+            var material = new Material(sourceMaterial) { name = materialName };
+            material.mainTexture = texture;
+            AssetDatabase.CreateAsset(material, materialPath);
+
+            foreach (var renderer in root.GetComponentsInChildren<Renderer>())
+            {
+                renderer.sharedMaterial = material;
+            }
         }
 
         private static void CreateParkingFence(string name, Vector3 position, float yRotation)
@@ -346,6 +786,37 @@ namespace HorseParking.Presentation.Editor
         private static void PlaceBaseOnGround(GameObject root)
         {
             PlaceBaseAtHeight(root, groundSurfaceY);
+        }
+
+        private static void PlaceHorseFeetOnTerrain(GameObject mountedClient)
+        {
+            var horseRenderers = mountedClient.GetComponentsInChildren<Renderer>()
+                .Where(renderer => renderer.enabled && (renderer.name == "Horse Body" || renderer.name.Contains("Horse")))
+                .ToArray();
+            if (horseRenderers.Length == 0)
+            {
+                throw new System.InvalidOperationException("Mounted client is missing the Horse renderer.");
+            }
+
+            var hoofBaselineY = horseRenderers.Min(renderer => renderer.bounds.min.y);
+            mountedClient.transform.position += Vector3.up * (groundSurfaceY - hoofBaselineY + 0.02f);
+        }
+
+        private static TerrainLayer CreateGroundTerrainLayer()
+        {
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(TerrainTexturePath);
+            if (texture == null)
+            {
+                throw new System.InvalidOperationException("Terrain texture is missing: " + TerrainTexturePath);
+            }
+
+            var terrainLayer = new TerrainLayer
+            {
+                diffuseTexture = texture,
+                tileSize = new Vector2(4f, 4f)
+            };
+            AssetDatabase.CreateAsset(terrainLayer, TerrainLayerPath);
+            return terrainLayer;
         }
 
         private static void PlaceBaseAtHeight(GameObject root, float surfaceY)
