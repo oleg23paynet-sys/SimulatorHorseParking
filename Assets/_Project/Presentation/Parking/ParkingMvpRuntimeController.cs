@@ -15,6 +15,7 @@ namespace HorseParking.Presentation.Parking
         [SerializeField] private GameObject paymentSackVisual = null!;
         [SerializeField] private Transform paymentBagAnchor = null!;
         [SerializeField] private MountedClientRoutePresenter routePresenter = null!;
+        [SerializeField] private RiderParkingSequencePresenter riderSequence = null!;
         [SerializeField] private float paymentReadyAfterSeconds = 5f;
         [SerializeField] private float paymentApproachFailsafeSeconds = 8f;
 
@@ -22,6 +23,7 @@ namespace HorseParking.Presentation.Parking
         private bool approachingPayment;
         private bool paymentCollected;
         private bool clientParked;
+        private bool riderReadyForDeparture;
         private bool exitStarted;
         private bool initialized;
         private int collectedGold;
@@ -32,18 +34,19 @@ namespace HorseParking.Presentation.Parking
 
         public bool CanOpenExit => initialized && paymentCollected && collectedGold > 0 && !exitStarted;
 
-        public void Configure(GameCompositionRoot root, GameObject client, GameObject sack, MountedClientRoutePresenter route, Transform bagAnchor)
+        public void Configure(GameCompositionRoot root, GameObject client, GameObject sack, MountedClientRoutePresenter route, Transform bagAnchor, RiderParkingSequencePresenter sequence)
         {
             compositionRoot = root;
             clientVisual = client;
             paymentSackVisual = sack;
             routePresenter = route;
             paymentBagAnchor = bagAnchor;
+            riderSequence = sequence;
         }
 
         private void Start()
         {
-            if (compositionRoot == null || clientVisual == null || paymentSackVisual == null || paymentBagAnchor == null)
+            if (compositionRoot == null || clientVisual == null || paymentSackVisual == null || paymentBagAnchor == null || riderSequence == null)
             {
                 Debug.LogError("Parking MVP runtime is missing scene references.", this);
                 enabled = false;
@@ -61,13 +64,14 @@ namespace HorseParking.Presentation.Parking
             }
 
             routePresenter.BindCallbacks(NotifyClientParked, NotifyClientAtPaymentGate, NotifyClientExited);
+            riderSequence.BindReadyForDeparture(NotifyRiderReadyForDeparture);
             routePresenter.BeginArrival();
             Debug.Log("Parking: client is arriving.");
         }
 
         private void Update()
         {
-            if (!initialized || !clientParked || paymentRequested)
+            if (!initialized || !clientParked || !riderReadyForDeparture || paymentRequested)
             {
                 return;
             }
@@ -126,8 +130,16 @@ namespace HorseParking.Presentation.Parking
                 return;
             }
             clientParked = true;
+            riderReadyForDeparture = false;
             parkedAtSeconds = compositionRoot.GameClock.ElapsedSeconds;
-            Debug.Log("Parking: client occupies the slot. Payment will be requested in " + paymentReadyAfterSeconds + " seconds.");
+            riderSequence.BeginParkingVisit();
+            Debug.Log("Parking: horse is parked; rider is dismounting and leaving on foot.");
+        }
+
+        private void NotifyRiderReadyForDeparture()
+        {
+            riderReadyForDeparture = true;
+            Debug.Log("Parking: rider returned and mounted the horse.");
         }
 
         public void NotifyClientAtPaymentGate()

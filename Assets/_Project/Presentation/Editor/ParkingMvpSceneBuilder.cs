@@ -30,6 +30,9 @@ namespace HorseParking.Presentation.Editor
         private const string HorseAnimsetRiderAvatarPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/Rider.FBX";
         private const string HorseAnimsetRiderIdlePath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/Rider_Idle_01.FBX";
         private const string HorseAnimsetRiderWalkPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/Rider_Walk.FBX";
+        private const string HorseAnimsetRiderMountDismountPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/Transitions/Rider_Mount_Dismount_Left.FBX";
+        private const string HorseAnimsetRiderOnFootIdlePath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/OnFoot/S_Idle.fbx";
+        private const string HorseAnimsetRiderOnFootWalkPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/OnFoot/S_Walk_F.fbx";
         private const string HorseAnimsetRiderAlbedoPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/Textures/CowBoyDiffuse.png";
         private const string HorseAnimsetRiderNormalPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/Textures/CowBoyNormal.Png";
         private const string HorseAnimsetRiderSpecularPath = "Assets/_Project/ThirdParty/HorseAnimsetPro/Rider/Textures/CowboySpecularSmoothness.png";
@@ -69,10 +72,25 @@ namespace HorseParking.Presentation.Editor
             var compositionRoot = new GameObject("GameCompositionRoot").AddComponent<GameCompositionRoot>();
             CreatePlayer(compositionRoot);
             CreateGround();
-            CreateParkingZone();
-            var client = CreateClient(out var animationAdapter, out var paymentBagAnchor);
+            var parkingRouteObstacles = CreateParkingZone();
+            var client = CreateClient(
+                out var animationAdapter,
+                out var paymentBagAnchor,
+                out var riderRoot,
+                out var riderAnimator,
+                out var saddleParent);
             var exitAndPayment = CreateExitAndPayment();
-            CreateParkingRuntime(compositionRoot, client, animationAdapter, paymentBagAnchor, exitAndPayment.gate, exitAndPayment.sack);
+            CreateParkingRuntime(
+                compositionRoot,
+                client,
+                animationAdapter,
+                paymentBagAnchor,
+                riderRoot,
+                riderAnimator,
+                saddleParent,
+                exitAndPayment.gate,
+                exitAndPayment.sack,
+                parkingRouteObstacles);
             CreateOperationsBuildings();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -129,17 +147,26 @@ namespace HorseParking.Presentation.Editor
             groundSurfaceY = terrainObject.transform.position.y + terrainData.GetInterpolatedHeight(0.5f, 0.5f);
         }
 
-        private static void CreateParkingZone()
+        private static Collider[] CreateParkingZone()
         {
             var zone = new GameObject("ParkingSlot_01");
             zone.transform.position = Vector3.zero;
 
-            CreateParkingFence("ParkingSlot_01_LeftFence", new Vector3(-2f, 0f, -1f), 90f);
-            CreateParkingFence("ParkingSlot_01_RightFence", new Vector3(2f, 0f, -1f), 90f);
-            CreateParkingFence("ParkingSlot_01_BackFence", new Vector3(0f, 0f, 1.1f), 0f);
+            var left = CreateParkingFence("ParkingSlot_01_LeftFence", new Vector3(-2f, 0f, -1f), 90f);
+            var right = CreateParkingFence("ParkingSlot_01_RightFence", new Vector3(2f, 0f, -1f), 90f);
+            var back = CreateParkingFence("ParkingSlot_01_BackFence", new Vector3(0f, 0f, 1.1f), 0f);
+            return left.GetComponentsInChildren<Collider>(true)
+                .Concat(right.GetComponentsInChildren<Collider>(true))
+                .Concat(back.GetComponentsInChildren<Collider>(true))
+                .ToArray();
         }
 
-        private static GameObject CreateClient(out MonoBehaviour animationAdapter, out Transform paymentBagAnchor)
+        private static GameObject CreateClient(
+            out MonoBehaviour animationAdapter,
+            out Transform paymentBagAnchor,
+            out Transform riderRoot,
+            out Animator riderAnimator,
+            out Transform saddleParent)
         {
             var mountedClient = new GameObject("ClientMountedHorseRider_01");
             ConfigureHorseAnimsetImports();
@@ -150,12 +177,15 @@ namespace HorseParking.Presentation.Editor
 
             var animator = horseVisual.GetComponent<Animator>() ?? horseVisual.AddComponent<Animator>();
             animator.runtimeAnimatorController = GetOrCreateHorseAnimsetController();
+            // Route navigation owns ordinary horse translation and rotation. H_Walk
+            // is visual-only; paid Root Motion remains enabled only for rider
+            // mount/dismount transitions in RiderParkingSequencePresenter.
             animator.applyRootMotion = false;
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
 
             mountedClient.transform.position = new Vector3(0f, 0f, -12f);
             PlaceHorseFeetOnTerrain(horseVisual);
-            var riderAnimator = CreateReadySeatedRider(mountedClient, horseVisual);
+            riderAnimator = CreateReadySeatedRider(mountedClient, horseVisual, out riderRoot, out saddleParent);
             var adapter = mountedClient.AddComponent<AnimatorMountedClientAnimationAdapter>();
             adapter.Configure(new[] { animator, riderAnimator });
             animationAdapter = adapter;
@@ -338,7 +368,11 @@ namespace HorseParking.Presentation.Editor
             return material;
         }
 
-        private static Animator CreateReadySeatedRider(GameObject mountedClient, GameObject horseVisual)
+        private static Animator CreateReadySeatedRider(
+            GameObject mountedClient,
+            GameObject horseVisual,
+            out Transform riderRoot,
+            out Transform saddleParent)
         {
             // The old female mesh had no skeleton and could never follow a riding clip.
             // The paid HAP rider is a proper Humanoid and is isolated behind the same
@@ -375,14 +409,16 @@ namespace HorseParking.Presentation.Editor
 
             var riderAnimator = rider.GetComponent<Animator>() ?? rider.AddComponent<Animator>();
             riderAnimator.runtimeAnimatorController = GetOrCreateHorseAnimsetRiderController();
-            riderAnimator.applyRootMotion = false;
+            // Root Motion stays enabled on the paid rider Animator. The sequence
+            // presenter consumes it only in MountLeft/DismountLeft and ignores it in
+            // mounted/on-foot looping states.
+            riderAnimator.applyRootMotion = true;
             riderAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
 
             var saddleBone = FindDescendant(horseVisual.transform, "Spine2") ?? FindDescendant(horseVisual.transform, "Back");
-            if (saddleBone != null)
-            {
-                rider.transform.SetParent(saddleBone, true);
-            }
+            saddleParent = saddleBone != null ? saddleBone : mountedClient.transform;
+            rider.transform.SetParent(saddleParent, true);
+            riderRoot = rider.transform;
 
             return riderAnimator;
         }
@@ -406,9 +442,12 @@ namespace HorseParking.Presentation.Editor
 
             ConfigureHorseAnimsetRiderClip(HorseAnimsetRiderIdlePath, sourceAvatar);
             ConfigureHorseAnimsetRiderClip(HorseAnimsetRiderWalkPath, sourceAvatar);
+            ConfigureHorseAnimsetRiderClip(HorseAnimsetRiderMountDismountPath, sourceAvatar, false, true);
+            ConfigureHorseAnimsetRiderClip(HorseAnimsetRiderOnFootIdlePath, sourceAvatar);
+            ConfigureHorseAnimsetRiderClip(HorseAnimsetRiderOnFootWalkPath, sourceAvatar);
         }
 
-        private static void ConfigureHorseAnimsetRiderClip(string path, Avatar sourceAvatar)
+        private static void ConfigureHorseAnimsetRiderClip(string path, Avatar sourceAvatar, bool loop = true, bool useRootMotion = false)
         {
             var importer = AssetImporter.GetAtPath(path) as ModelImporter;
             if (importer == null)
@@ -420,13 +459,20 @@ namespace HorseParking.Presentation.Editor
             importer.animationType = ModelImporterAnimationType.Human;
             importer.avatarSetup = ModelImporterAvatarSetup.CopyFromOther;
             importer.sourceAvatar = sourceAvatar;
-            var clips = importer.defaultClipAnimations;
+            var clips = importer.clipAnimations;
+            if (clips == null || clips.Length == 0)
+            {
+                clips = importer.defaultClipAnimations;
+            }
             foreach (var clip in clips)
             {
-                clip.loopTime = true;
-                clip.loopPose = true;
-                clip.keepOriginalPositionXZ = true;
-                clip.keepOriginalPositionY = true;
+                clip.loopTime = loop;
+                clip.loopPose = loop;
+                // Mount/dismount transitions contain authored root translation. Baking
+                // it into the body pose makes the rider float above the horse.
+                clip.keepOriginalPositionXZ = !useRootMotion;
+                clip.keepOriginalPositionY = !useRootMotion;
+                clip.heightFromFeet = true;
             }
             importer.clipAnimations = clips;
             importer.SaveAndReimport();
@@ -439,21 +485,60 @@ namespace HorseParking.Presentation.Editor
             AssetDatabase.DeleteAsset(HorseAnimsetRiderControllerPath);
             var controller = AnimatorController.CreateAnimatorControllerAtPath(HorseAnimsetRiderControllerPath);
             controller.AddParameter("Walking", AnimatorControllerParameterType.Bool);
+            controller.AddParameter("OnFootWalking", AnimatorControllerParameterType.Bool);
+            controller.AddParameter("Dismount", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("Mount", AnimatorControllerParameterType.Trigger);
             var stateMachine = controller.layers[0].stateMachine;
-            var idle = stateMachine.AddState("MountedIdle");
-            idle.motion = LoadHorseAnimsetClip(HorseAnimsetRiderIdlePath, "Rider_Idle_01");
-            var walk = stateMachine.AddState("MountedWalk");
-            walk.motion = LoadHorseAnimsetClip(HorseAnimsetRiderWalkPath, "Rider_Walk");
-            stateMachine.defaultState = idle;
+            var mountedIdle = stateMachine.AddState("MountedIdle");
+            mountedIdle.motion = LoadHorseAnimsetClip(HorseAnimsetRiderIdlePath, "Rider_Idle_01");
+            var mountedWalk = stateMachine.AddState("MountedWalk");
+            mountedWalk.motion = LoadHorseAnimsetClip(HorseAnimsetRiderWalkPath, "Rider_Walk");
+            var dismount = stateMachine.AddState("DismountLeft");
+            dismount.motion = LoadHorseAnimsetClip(HorseAnimsetRiderMountDismountPath, "Rider_Dismount_Left");
+            var onFootIdle = stateMachine.AddState("OnFootIdle");
+            onFootIdle.motion = LoadHorseAnimsetClip(HorseAnimsetRiderOnFootIdlePath, "S_Idle");
+            var onFootWalk = stateMachine.AddState("OnFootWalk");
+            onFootWalk.motion = LoadHorseAnimsetClip(HorseAnimsetRiderOnFootWalkPath, "S_Walk_F");
+            var mount = stateMachine.AddState("MountLeft");
+            mount.motion = LoadHorseAnimsetClip(HorseAnimsetRiderMountDismountPath, "Rider_Mount_Left");
+            stateMachine.defaultState = mountedIdle;
 
-            var toWalk = idle.AddTransition(walk);
+            var toWalk = mountedIdle.AddTransition(mountedWalk);
             toWalk.AddCondition(AnimatorConditionMode.If, 0f, "Walking");
             toWalk.hasExitTime = false;
             toWalk.duration = 0.12f;
-            var toIdle = walk.AddTransition(idle);
+            var toIdle = mountedWalk.AddTransition(mountedIdle);
             toIdle.AddCondition(AnimatorConditionMode.IfNot, 0f, "Walking");
             toIdle.hasExitTime = false;
             toIdle.duration = 0.12f;
+
+            var toDismount = stateMachine.AddAnyStateTransition(dismount);
+            toDismount.AddCondition(AnimatorConditionMode.If, 0f, "Dismount");
+            toDismount.hasExitTime = false;
+            toDismount.duration = 0.06f;
+            toDismount.canTransitionToSelf = false;
+            var dismountComplete = dismount.AddTransition(onFootIdle);
+            dismountComplete.hasExitTime = true;
+            dismountComplete.exitTime = 0.98f;
+            dismountComplete.duration = 0.05f;
+
+            var beginOnFootWalk = onFootIdle.AddTransition(onFootWalk);
+            beginOnFootWalk.AddCondition(AnimatorConditionMode.If, 0f, "OnFootWalking");
+            beginOnFootWalk.hasExitTime = false;
+            beginOnFootWalk.duration = 0.10f;
+            var stopOnFootWalk = onFootWalk.AddTransition(onFootIdle);
+            stopOnFootWalk.AddCondition(AnimatorConditionMode.IfNot, 0f, "OnFootWalking");
+            stopOnFootWalk.hasExitTime = false;
+            stopOnFootWalk.duration = 0.10f;
+
+            var beginMount = onFootIdle.AddTransition(mount);
+            beginMount.AddCondition(AnimatorConditionMode.If, 0f, "Mount");
+            beginMount.hasExitTime = false;
+            beginMount.duration = 0.06f;
+            var mountComplete = mount.AddTransition(mountedIdle);
+            mountComplete.hasExitTime = true;
+            mountComplete.exitTime = 0.98f;
+            mountComplete.duration = 0.05f;
             AssetDatabase.SaveAssets();
             return controller;
         }
@@ -618,7 +703,17 @@ namespace HorseParking.Presentation.Editor
             return (gate, sack);
         }
 
-        private static void CreateParkingRuntime(GameCompositionRoot compositionRoot, GameObject client, MonoBehaviour animationAdapter, Transform paymentBagAnchor, GameObject gate, GameObject sack)
+        private static void CreateParkingRuntime(
+            GameCompositionRoot compositionRoot,
+            GameObject client,
+            MonoBehaviour animationAdapter,
+            Transform paymentBagAnchor,
+            Transform riderRoot,
+            Animator riderAnimator,
+            Transform saddleParent,
+            GameObject gate,
+            GameObject sack,
+            Collider[] parkingRouteObstacles)
         {
             var runtimeObject = new GameObject("ParkingMvpRuntime");
             var runtime = runtimeObject.AddComponent<ParkingMvpRuntimeController>();
@@ -630,9 +725,39 @@ namespace HorseParking.Presentation.Editor
             paymentPoint.transform.position = new Vector3(0f, groundSurfaceY, -4.25f);
             var exitPoint = new GameObject("ClientExitPoint_01");
             exitPoint.transform.position = new Vector3(0f, groundSurfaceY, -14f);
+            var riderDismountPoint = new GameObject("RiderMountPoint_01");
+            riderDismountPoint.transform.position = new Vector3(-1.15f, groundSurfaceY, -1f);
+            riderDismountPoint.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+            var riderLanePoint = new GameObject("RiderOpenLanePoint_01");
+            // Centre of the unobstructed entrance between the two side fences.
+            riderLanePoint.transform.position = new Vector3(0f, groundSurfaceY, -3.35f);
+            riderLanePoint.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+            var riderAwayPoint = new GameObject("RiderAwayPoint_01");
+            riderAwayPoint.transform.position = new Vector3(-4.5f, groundSurfaceY, -4.5f);
             var route = client.AddComponent<MountedClientRoutePresenter>();
             route.Configure(client.transform, entryLanePoint.transform, parkingPoint.transform, paymentPoint.transform, exitPoint.transform, animationAdapter, runtime.NotifyClientParked, runtime.NotifyClientAtPaymentGate, runtime.NotifyClientExited);
-            runtime.Configure(compositionRoot, client, sack, route, paymentBagAnchor);
+            var riderSequence = riderRoot.gameObject.AddComponent<RiderParkingSequencePresenter>();
+            var dismountClip = LoadHorseAnimsetClip(HorseAnimsetRiderMountDismountPath, "Rider_Dismount_Left");
+            var mountClip = LoadHorseAnimsetClip(HorseAnimsetRiderMountDismountPath, "Rider_Mount_Left");
+            var terrainCollider = Terrain.activeTerrain != null
+                ? Terrain.activeTerrain.GetComponent<TerrainCollider>()
+                : null;
+            if (terrainCollider == null)
+            {
+                throw new System.InvalidOperationException("Parking terrain collider is required for rider grounding.");
+            }
+            riderSequence.Configure(
+                riderRoot,
+                riderAnimator,
+                saddleParent,
+                riderDismountPoint.transform,
+                riderLanePoint.transform,
+                riderAwayPoint.transform,
+                terrainCollider,
+                parkingRouteObstacles.Concat(gate.GetComponentsInChildren<Collider>(true)).ToArray(),
+                dismountClip.length + 0.12f,
+                mountClip.length + 0.12f);
+            runtime.Configure(compositionRoot, client, sack, route, paymentBagAnchor, riderSequence);
 
             var sackTarget = sack.AddComponent<ParkingPaymentBagInteractionTarget>();
             sackTarget.Configure(runtime);
@@ -736,7 +861,7 @@ namespace HorseParking.Presentation.Editor
             }
         }
 
-        private static void CreateParkingFence(string name, Vector3 position, float yRotation)
+        private static GameObject CreateParkingFence(string name, Vector3 position, float yRotation)
         {
             var fence = InstantiateAsset(GatePath, name);
             ScaleToHeight(fence, 1.25f);
@@ -744,6 +869,7 @@ namespace HorseParking.Presentation.Editor
             fence.transform.rotation = Quaternion.Euler(0f, yRotation, 0f);
             PlaceBaseOnGround(fence);
             AddMeshColliders(fence);
+            return fence;
         }
 
         private static void CreateOperationsBuildings()

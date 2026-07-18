@@ -88,6 +88,7 @@ namespace HorseParking.Presentation.Parking
             var target = destination.position;
             target.y = clientRoot.position.y;
             var offset = target - clientRoot.position;
+            offset.y = 0f;
             if (offset.sqrMagnitude > 0.0025f)
             {
                 clientRoot.rotation = Quaternion.RotateTowards(clientRoot.rotation, Quaternion.LookRotation(offset.normalized, Vector3.up), 300f * Time.deltaTime);
