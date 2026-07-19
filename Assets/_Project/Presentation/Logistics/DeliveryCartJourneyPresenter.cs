@@ -31,9 +31,14 @@ namespace HorseParking.Presentation.Logistics
         [SerializeField] private DeliveryCartVisualAdapter visualAdapter = null!;
         [Min(0.1f)] [SerializeField] private float travelSpeedMetersPerSecond = 2.2f;
         [Min(1f)] [SerializeField] private float turnSpeedDegreesPerSecond = 140f;
+        [SerializeField] private float parkingFenceBypassZ = -8f;
+        [Min(0.1f)] [SerializeField] private float collisionProbeRadius = 0.55f;
+        [Min(0.1f)] [SerializeField] private float collisionProbeHeight = 0.8f;
 
         private CartJourneyUseCase journeyUseCase = null!;
+        private LogisticsInventoryUseCase inventoryUseCase = null!;
         private CartJourneyState observedState = (CartJourneyState)(-1);
+        private Vector3[] routePositions = System.Array.Empty<Vector3>();
         private int routeIndex;
 
         public void Configure(
@@ -61,10 +66,30 @@ namespace HorseParking.Presentation.Logistics
             }
 
             journeyUseCase = compositionRoot.CartJourneyUseCase;
+            inventoryUseCase = compositionRoot.LogisticsInventoryUseCase;
             visualAdapter.BindInventory(compositionRoot);
+            ConfigureSafeRouteAroundParkingFence();
             var initialState = journeyUseCase.GetSnapshot().State;
             BeginState(initialState);
             observedState = initialState;
+        }
+
+        private void ConfigureSafeRouteAroundParkingFence()
+        {
+            if (outboundRoute.Length < 2) return;
+            var warehouseEnd = outboundRoute[0].position;
+            var storeEnd = outboundRoute[outboundRoute.Length - 1].position;
+            var bypassZ = Mathf.Min(parkingFenceBypassZ, -10.5f);
+            const float outsideBuildingClearance = 2.4f;
+            routePositions = new[]
+            {
+                warehouseEnd,
+                new Vector3(warehouseEnd.x + outsideBuildingClearance, warehouseEnd.y, warehouseEnd.z),
+                new Vector3(warehouseEnd.x + outsideBuildingClearance, warehouseEnd.y, bypassZ),
+                new Vector3(storeEnd.x - outsideBuildingClearance, storeEnd.y, bypassZ),
+                new Vector3(storeEnd.x - outsideBuildingClearance, storeEnd.y, storeEnd.z),
+                storeEnd
+            };
         }
 
         private void Update()
@@ -85,7 +110,7 @@ namespace HorseParking.Presentation.Logistics
             switch (state)
             {
                 case CartJourneyState.AtWarehouse:
-                    vehicleRoot.SetPositionAndRotation(outboundRoute[0].position, outboundRoute[0].rotation);
+                    vehicleRoot.SetPositionAndRotation(routePositions[0], GetEndpointRotation(0));
                     visualAdapter.SetTraveling(false);
                     break;
                 case CartJourneyState.TravelingToDestination:
@@ -94,12 +119,12 @@ namespace HorseParking.Presentation.Logistics
                     break;
                 case CartJourneyState.AtDestination:
                     vehicleRoot.SetPositionAndRotation(
-                        outboundRoute[outboundRoute.Length - 1].position,
-                        outboundRoute[outboundRoute.Length - 1].rotation);
+                        routePositions[routePositions.Length - 1],
+                        GetEndpointRotation(routePositions.Length - 1));
                     visualAdapter.SetTraveling(false);
                     break;
                 case CartJourneyState.ReturningToWarehouse:
-                    routeIndex = outboundRoute.Length - 2;
+                    routeIndex = routePositions.Length - 2;
                     visualAdapter.SetTraveling(true);
                     break;
             }
@@ -107,9 +132,9 @@ namespace HorseParking.Presentation.Logistics
 
         private void AdvanceOutbound()
         {
-            if (!MoveTowards(outboundRoute[routeIndex])) return;
+            if (!MoveTowards(routePositions[routeIndex])) return;
             routeIndex++;
-            if (routeIndex >= outboundRoute.Length)
+            if (routeIndex >= routePositions.Length)
             {
                 visualAdapter.SetTraveling(false);
                 journeyUseCase.NotifyArrivedAtDestination();
@@ -118,25 +143,60 @@ namespace HorseParking.Presentation.Logistics
 
         private void AdvanceReturn()
         {
-            if (!MoveTowards(outboundRoute[routeIndex])) return;
+            if (!MoveTowards(routePositions[routeIndex])) return;
             routeIndex--;
             if (routeIndex < 0)
             {
                 visualAdapter.SetTraveling(false);
-                journeyUseCase.NotifyArrivedAtWarehouse();
+                var arrival = journeyUseCase.NotifyArrivedAtWarehouse();
+                if (arrival.Succeeded) UnloadCartIntoWarehouse();
             }
         }
 
-        private bool MoveTowards(Transform target)
+        private void UnloadCartIntoWarehouse()
+        {
+            var cart = inventoryUseCase.GetCartSnapshot();
+            foreach (var item in cart.Items)
+            {
+                if (item.Quantity > 0)
+                {
+                    inventoryUseCase.TryUnloadCart(item.ResourceId, item.Quantity);
+                }
+            }
+        }
+
+        private Quaternion GetEndpointRotation(int index)
+        {
+            var adjacentIndex = index == 0 ? 1 : index - 1;
+            var direction = index == 0
+                ? routePositions[index] - routePositions[adjacentIndex]
+                : routePositions[index] - routePositions[adjacentIndex];
+            direction.y = 0f;
+            return direction.sqrMagnitude > 0.001f
+                ? Quaternion.LookRotation(direction.normalized, Vector3.up)
+                : vehicleRoot.rotation;
+        }
+
+        private bool MoveTowards(Vector3 target)
         {
             var current = vehicleRoot.position;
-            vehicleRoot.position = Vector3.MoveTowards(
-                current,
-                target.position,
-                travelSpeedMetersPerSecond * Time.deltaTime);
-
-            var heading = target.position - current;
+            var heading = target - current;
             heading.y = 0f;
+            var remainingDistance = heading.magnitude;
+            if (remainingDistance > 0.0001f)
+            {
+                var moveDistance = Mathf.Min(
+                    travelSpeedMetersPerSecond * Time.deltaTime,
+                    remainingDistance);
+                if (IsRouteBlocked(current, heading.normalized, moveDistance))
+                {
+                    visualAdapter.SetTraveling(false);
+                    return false;
+                }
+                visualAdapter.SetTraveling(true);
+                vehicleRoot.position = current + heading.normalized * moveDistance;
+            }
+
             if (heading.sqrMagnitude > 0.0001f)
             {
                 var desiredRotation = Quaternion.LookRotation(heading.normalized, Vector3.up);
@@ -146,7 +206,25 @@ namespace HorseParking.Presentation.Logistics
                     turnSpeedDegreesPerSecond * Time.deltaTime);
             }
 
-            return Vector3.SqrMagnitude(vehicleRoot.position - target.position) <= 0.0004f;
+            return Vector3.SqrMagnitude(vehicleRoot.position - target) <= 0.0004f;
+        }
+
+        private bool IsRouteBlocked(Vector3 current, Vector3 direction, float moveDistance)
+        {
+            var probeOrigin = current + Vector3.up * collisionProbeHeight;
+            if (!Physics.SphereCast(
+                    probeOrigin,
+                    collisionProbeRadius,
+                    direction,
+                    out var hit,
+                    moveDistance + 0.08f,
+                    Physics.AllLayers,
+                    QueryTriggerInteraction.Ignore))
+            {
+                return false;
+            }
+
+            return hit.transform != vehicleRoot && !hit.transform.IsChildOf(vehicleRoot);
         }
     }
 }

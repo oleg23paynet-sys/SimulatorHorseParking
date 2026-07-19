@@ -35,6 +35,10 @@ namespace HorseParking.Presentation.Editor
         private const string CartDriverRuntimeFolder = "Assets/_Project/Content/Models/Characters/CartDriver/MedievalCivilian3/Runtime";
         private const string CartDriverTextureFolder = CartDriverRuntimeFolder + "/Textures";
         private const string CartDriverMaterialFolder = CartDriverRuntimeFolder + "/Materials";
+        private const string KayKitPropsFolder = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/decoration/props";
+        private const string WoodCargoModelPath = KayKitPropsFolder + "/resource_lumber.fbx";
+        private const string StoneCargoModelPath = KayKitPropsFolder + "/resource_stone.fbx";
+        private const string IronCargoModelPath = KayKitPropsFolder + "/crate_A_small.fbx";
         private const string TerrainDataPath = "Assets/_Project/Content/Terrain/TerrainData_ParkingMvp.asset";
         private const string TerrainLayerPath = "Assets/_Project/Content/Terrain/TerrainLayer_ParkingMvpCobblestone.terrainlayer";
         private const string TerrainTexturePath = "Assets/_Project/Content/Models/Environment/ParkingGround/CobblestoneLowpoly/0.jpg";
@@ -183,6 +187,55 @@ namespace HorseParking.Presentation.Editor
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
             Debug.Log("Stage 3.2 automatic delivery cart journey installed in " + ScenePath);
+        }
+
+        [MenuItem("Horse Parking/Repair Delivery Cart Cargo And Route")]
+        public static void RepairDeliveryCartCargoAndRoute()
+        {
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            var adapter = Object.FindAnyObjectByType<DeliveryCartVisualAdapter>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing DeliveryCartVisualAdapter.");
+            var vehicle = adapter.gameObject;
+            var cart = vehicle.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(candidate => candidate.name == "DeliveryCart_Visual")?.gameObject
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing DeliveryCart_Visual.");
+
+            foreach (var existing in vehicle.GetComponentsInChildren<Transform>(true)
+                         .Where(candidate => candidate.name.StartsWith("DeliveryCartCargo_"))
+                         .Select(candidate => candidate.gameObject)
+                         .ToArray())
+            {
+                Object.DestroyImmediate(existing);
+            }
+
+            var woodPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(WoodCargoModelPath)
+                ?? throw new System.InvalidOperationException("Wood cargo FBX is missing.");
+            var stonePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(StoneCargoModelPath)
+                ?? throw new System.InvalidOperationException("Stone cargo FBX is missing.");
+            var ironPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(IronCargoModelPath)
+                ?? throw new System.InvalidOperationException("Iron cargo FBX is missing.");
+            adapter.ConfigureCargoPrefabs(woodPrefab, stonePrefab, ironPrefab);
+            adapter.ConfigureCargoVisuals(
+                CreateDeliveryCartCargoVisuals(
+                    vehicle.transform, cart, woodPrefab, "DeliveryCartCargo_Wood",
+                    new[] { new Vector2(-0.34f, 0.02f), new Vector2(0.34f, 0.02f) }, 0.62f),
+                CreateDeliveryCartCargoVisuals(
+                    vehicle.transform, cart, stonePrefab, "DeliveryCartCargo_Stone",
+                    new[] { new Vector2(-0.34f, 0.38f), new Vector2(0.34f, 0.38f) }, 0.52f),
+                CreateDeliveryCartCargoVisuals(
+                    vehicle.transform, cart, ironPrefab, "DeliveryCartCargo_Iron",
+                    new[] { new Vector2(-0.34f, -0.32f), new Vector2(0.34f, -0.32f) }, 0.54f));
+
+            SetRoutePoint("CartRoute_WarehouseDelivery", new Vector3(7.2f, groundSurfaceY, -3.8f));
+            SetRoutePoint("CartRoute_WarehouseApproach", new Vector3(7.2f, groundSurfaceY, -8f));
+            SetRoutePoint("CartRoute_StoreApproach", new Vector3(-7.2f, groundSurfaceY, -8f));
+            SetRoutePoint("CartRoute_MaterialStoreLoading", new Vector3(-7.2f, groundSurfaceY, -3.8f));
+
+            EditorUtility.SetDirty(adapter);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Delivery cart cargo and collision-safe route repaired in " + ScenePath);
         }
 
         private static void CreateLighting()
@@ -1039,8 +1092,8 @@ namespace HorseParking.Presentation.Editor
             var positions = new[]
             {
                 new Vector3(7.2f, groundSurfaceY, -3.8f),
-                new Vector3(3.5f, groundSurfaceY, -5.2f),
-                new Vector3(-3.5f, groundSurfaceY, -5.2f),
+                new Vector3(7.2f, groundSurfaceY, -8f),
+                new Vector3(-7.2f, groundSurfaceY, -8f),
                 new Vector3(-7.2f, groundSurfaceY, -3.8f)
             };
             var names = new[]
@@ -1173,6 +1226,20 @@ namespace HorseParking.Presentation.Editor
 
             var visualAdapter = vehicle.AddComponent<DeliveryCartVisualAdapter>();
             visualAdapter.Configure(cartAnimator, driverAnimator);
+            var woodCargoPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(WoodCargoModelPath);
+            var stoneCargoPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(StoneCargoModelPath);
+            var ironCargoPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(IronCargoModelPath);
+            visualAdapter.ConfigureCargoPrefabs(woodCargoPrefab, stoneCargoPrefab, ironCargoPrefab);
+            visualAdapter.ConfigureCargoVisuals(
+                CreateDeliveryCartCargoVisuals(
+                    vehicle.transform, cart, woodCargoPrefab, "DeliveryCartCargo_Wood",
+                    new[] { new Vector2(-0.34f, 0.02f), new Vector2(0.34f, 0.02f) }, 0.62f),
+                CreateDeliveryCartCargoVisuals(
+                    vehicle.transform, cart, stoneCargoPrefab, "DeliveryCartCargo_Stone",
+                    new[] { new Vector2(-0.34f, 0.38f), new Vector2(0.34f, 0.38f) }, 0.52f),
+                CreateDeliveryCartCargoVisuals(
+                    vehicle.transform, cart, ironCargoPrefab, "DeliveryCartCargo_Iron",
+                    new[] { new Vector2(-0.34f, -0.32f), new Vector2(0.34f, -0.32f) }, 0.54f));
             var journeyPresenter = vehicle.AddComponent<DeliveryCartJourneyPresenter>();
             journeyPresenter.Configure(
                 compositionRoot,
@@ -1194,6 +1261,63 @@ namespace HorseParking.Presentation.Editor
             target.localPosition = localPosition;
             target.localRotation = Quaternion.Euler(localEulerAngles);
             return target;
+        }
+
+        private static GameObject[] CreateDeliveryCartCargoVisuals(
+            Transform vehicle,
+            GameObject cart,
+            GameObject prefab,
+            string namePrefix,
+            Vector2[] localPositions,
+            float targetHeight)
+        {
+            if (prefab == null)
+            {
+                throw new System.InvalidOperationException("Delivery cart cargo prefab is missing: " + namePrefix);
+            }
+
+            var results = new GameObject[localPositions.Length];
+            var cartBounds = GetBounds(cart);
+            for (var index = 0; index < localPositions.Length; index++)
+            {
+                var visual = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                visual.name = namePrefix + "_" + (index + 1);
+                visual.transform.SetParent(vehicle, false);
+                visual.transform.localPosition = Vector3.zero;
+                visual.transform.localRotation = Quaternion.identity;
+                foreach (var collider in visual.GetComponentsInChildren<Collider>(true))
+                {
+                    Object.DestroyImmediate(collider);
+                }
+                foreach (var body in visual.GetComponentsInChildren<Rigidbody>(true))
+                {
+                    Object.DestroyImmediate(body);
+                }
+                foreach (var renderer in visual.GetComponentsInChildren<Renderer>(true)) renderer.enabled = true;
+                ScaleToHeight(visual, targetHeight);
+
+                var desiredBottomCenter = vehicle.TransformPoint(new Vector3(
+                    localPositions[index].x,
+                    0f,
+                    localPositions[index].y));
+                desiredBottomCenter.y = cartBounds.max.y - 0.2f;
+                var visualBounds = GetBounds(visual);
+                visual.transform.position += new Vector3(
+                    desiredBottomCenter.x - visualBounds.center.x,
+                    desiredBottomCenter.y - visualBounds.min.y,
+                    desiredBottomCenter.z - visualBounds.center.z);
+                visual.SetActive(false);
+                results[index] = visual;
+            }
+            return results;
+        }
+
+        private static void SetRoutePoint(string name, Vector3 position)
+        {
+            var routePoint = GameObject.Find(name)
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing route point " + name + ".");
+            routePoint.transform.position = position;
+            EditorUtility.SetDirty(routePoint.transform);
         }
 
         private static void ConfigureDeliveryCartDriverImport()

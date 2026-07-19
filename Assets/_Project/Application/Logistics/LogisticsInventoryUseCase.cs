@@ -67,6 +67,8 @@ namespace HorseParking.Application.Logistics
         private readonly IReadOnlyDictionary<ResourceId, int> storePrices;
         private int gold;
 
+        public event Action? CartInventoryChanged;
+
         public LogisticsInventoryUseCase(
             ResourceCatalog resourceCatalog,
             Warehouse warehouse,
@@ -111,7 +113,9 @@ namespace HorseParking.Application.Logistics
                 return InventoryOperationResult.Failure(InventoryFailureReason.UnknownResource);
             }
 
-            return warehouse.Inventory.TryTransferTo(cart.Cargo, resourceId, quantity);
+            var result = warehouse.Inventory.TryTransferTo(cart.Cargo, resourceId, quantity);
+            if (result.Succeeded) CartInventoryChanged?.Invoke();
+            return result;
         }
 
         public InventoryOperationResult TryUnloadCart(ResourceId resourceId, int quantity)
@@ -121,7 +125,9 @@ namespace HorseParking.Application.Logistics
                 return InventoryOperationResult.Failure(InventoryFailureReason.UnknownResource);
             }
 
-            return cart.Cargo.TryTransferTo(warehouse.Inventory, resourceId, quantity);
+            var result = cart.Cargo.TryTransferTo(warehouse.Inventory, resourceId, quantity);
+            if (result.Succeeded) CartInventoryChanged?.Invoke();
+            return result;
         }
 
         public PurchaseResult TryPurchaseForCart(ResourceId resourceId, int quantity)
@@ -146,6 +152,7 @@ namespace HorseParking.Application.Logistics
             }
 
             gold -= totalPrice;
+            CartInventoryChanged?.Invoke();
             return PurchaseResult.Success(gold);
         }
 
