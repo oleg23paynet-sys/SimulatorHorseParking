@@ -1,0 +1,251 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 159bfc188f1079942807f9ea6b81b382, type: 3}
+  m_Name: GameLocalizationSettings
+  m_EditorClassIdentifier: HorseParking.Presentation::HorseParking.Presentation.Localization.GameLocalizationSettings
+  currentLocale: ru
+  translations:
+  - locale: ru
+    key: ui.logistics.title
+    text: "\u041B\u043E\u0433\u0438\u0441\u0442\u0438\u043A\u0430"
+  - locale: ru
+    key: ui.inventory.warehouse
+    text: "\u0421\u043A\u043B\u0430\u0434"
+  - locale: ru
+    key: ui.inventory.cart
+    text: "\u0422\u0435\u043B\u0435\u0433\u0430"
+  - locale: ru
+    key: ui.inventory.capacity
+    text: "\u0412\u043C\u0435\u0441\u0442\u0438\u043C\u043E\u0441\u0442\u044C: {used}/{capacity}"
+  - locale: ru
+    key: ui.inventory.resource_line
+    text: '{resource}: {quantity}'
+  - locale: ru
+    key: resource.wood
+    text: "\u0414\u0435\u0440\u0435\u0432\u043E"
+  - locale: ru
+    key: resource.stone
+    text: "\u041A\u0430\u043C\u0435\u043D\u044C"
+  - locale: ru
+    key: resource.iron
+    text: "\u0416\u0435\u043B\u0435\u0437\u043E"
+  - locale: en
+    key: ui.logistics.title
+    text: Logistics
+  - locale: en
+    key: ui.inventory.warehouse
+    text: Warehouse
+  - locale: en
+    key: ui.inventory.cart
+    text: Cart
+  - locale: en
+    key: ui.inventory.capacity
+    text: 'Capacity: {used}/{capacity}'
+  - locale: en
+    key: ui.inventory.resource_line
+    text: '{resource}: {quantity}'
+  - locale: en
+    key: resource.wood
+    text: Wood
+  - locale: en
+    key: resource.stone
+    text: Stone
+  - locale: en
+    key: resource.iron
+    text: Iron
+  - locale: ru
+    key: ui.cart.status
+    text: "\u0422\u0435\u043B\u0435\u0433\u0430: {state}"
+  - locale: ru
+    key: cart.state.at_warehouse
+    text: "\u043D\u0430 \u0441\u043A\u043B\u0430\u0434\u0435"
+  - locale: ru
+    key: cart.state.traveling_to_store
+    text: "\u0435\u0434\u0435\u0442 \u0432 \u043C\u0430\u0433\u0430\u0437\u0438\u043D"
+  - locale: ru
+    key: cart.state.at_store
+    text: "\u0443 \u043C\u0430\u0433\u0430\u0437\u0438\u043D\u0430"
+  - locale: ru
+    key: cart.state.returning_to_warehouse
+    text: "\u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044F
+      \u043D\u0430 \u0441\u043A\u043B\u0430\u0434"
+  - locale: ru
+    key: cart.state.unknown
+    text: "\u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E"
+  - locale: ru
+    key: ui.common.close
+    text: "\u0417\u0430\u043A\u0440\u044B\u0442\u044C"
+  - locale: ru
+    key: location.warehouse
+    text: "\u0421\u043A\u043B\u0430\u0434"
+  - locale: ru
+    key: location.material_store
+    text: "\u041C\u0430\u0433\u0430\u0437\u0438\u043D \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B\u043E\u0432"
+  - locale: ru
+    key: ui.interaction.prompt
+    text: '[E] {action}: {target}'
+  - locale: ru
+    key: ui.cart.guide.warehouse
+    text: "\u0422\u041E\u0427\u041A\u0410 \u0414\u041E\u0421\u0422\u0410\u0412\u041A\u0418:
+      \u0421\u041A\u041B\u0410\u0414 \u2014 \u0432\u044B\u0441\u043E\u043A\u0430\u044F
+      \u043F\u043E\u0441\u0442\u0440\u043E\u0439\u043A\u0430 \u0441 \u043A\u0440\u0430\u043D\u043E\u043C
+      \u0441\u043F\u0440\u0430\u0432\u0430."
+  - locale: ru
+    key: ui.cart.guide.store
+    text: "\u0422\u0415\u041B\u0415\u0413\u0410 \u0423 \u0420\u042B\u041D\u041A\u0410
+      \u041C\u0410\u0422\u0415\u0420\u0418\u0410\u041B\u041E\u0412 \u2014 \u0432\u043E\u0437\u043D\u0438\u0446\u0430
+      \u0441\u0442\u043E\u0438\u0442 \u0437\u0430 \u0440\u0443\u043A\u043E\u044F\u0442\u043A\u0430\u043C\u0438.
+      \u041F\u043E\u0434\u043E\u0439\u0434\u0438\u0442\u0435 \u043A \u043B\u0430\u0432\u043A\u0435
+      \u0438 \u043D\u0430\u0436\u043C\u0438\u0442\u0435 E, \u0447\u0442\u043E\u0431\u044B
+      \u043E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0435\u0451 \u043A
+      \u0441\u043A\u043B\u0430\u0434\u0443."
+  - locale: en
+    key: ui.cart.status
+    text: 'Cart: {state}'
+  - locale: en
+    key: cart.state.at_warehouse
+    text: at warehouse
+  - locale: en
+    key: cart.state.traveling_to_store
+    text: traveling to material store
+  - locale: en
+    key: cart.state.at_store
+    text: at material store
+  - locale: en
+    key: cart.state.returning_to_warehouse
+    text: returning to warehouse
+  - locale: en
+    key: cart.state.unknown
+    text: unknown
+  - locale: en
+    key: ui.common.close
+    text: Close
+  - locale: en
+    key: location.warehouse
+    text: Warehouse
+  - locale: en
+    key: location.material_store
+    text: Material store
+  - locale: en
+    key: ui.interaction.prompt
+    text: '[E] {action}: {target}'
+  - locale: en
+    key: ui.cart.guide.warehouse
+    text: "DELIVERY POINT: WAREHOUSE \u2014 the tall crane building on the right."
+  - locale: en
+    key: ui.cart.guide.store
+    text: "CART AT MATERIAL MARKET \u2014 the driver is behind its handles. Approach
+      the stall and press E to send it to the warehouse."
+  - locale: ru
+    key: ui.cart_dispatch.title
+    text: "\u0423\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0442\u0435\u043B\u0435\u0433\u043E\u0439"
+  - locale: ru
+    key: ui.cart_dispatch.send_to_store
+    text: "\u041E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0432 \u043C\u0430\u0433\u0430\u0437\u0438\u043D
+      \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B\u043E\u0432"
+  - locale: ru
+    key: ui.cart_dispatch.return_to_warehouse
+    text: "\u0414\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u043E\u0432\u0430\u0440
+      \u043D\u0430 \u0441\u043A\u043B\u0430\u0434"
+  - locale: ru
+    key: interaction.cart.manage
+    text: "\u0423\u043F\u0440\u0430\u0432\u043B\u044F\u0442\u044C \u0442\u0435\u043B\u0435\u0433\u043E\u0439"
+  - locale: ru
+    key: interaction.cart.opened
+    text: "\u0423\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0442\u0435\u043B\u0435\u0433\u043E\u0439
+      \u043E\u0442\u043A\u0440\u044B\u0442\u043E"
+  - locale: en
+    key: ui.cart_dispatch.title
+    text: Cart management
+  - locale: en
+    key: ui.cart_dispatch.send_to_store
+    text: Send to material store
+  - locale: en
+    key: ui.cart_dispatch.return_to_warehouse
+    text: Deliver goods to warehouse
+  - locale: en
+    key: interaction.cart.manage
+    text: Manage cart
+  - locale: en
+    key: interaction.cart.opened
+    text: Cart management opened
+  - locale: ru
+    key: ui.cart_dispatch.current_station
+    text: "\u0412\u044B \u0443: {station}"
+  - locale: ru
+    key: ui.cart_dispatch.instruction.ready_warehouse
+    text: "\u0422\u0435\u043B\u0435\u0433\u0430 \u0441\u0442\u043E\u0438\u0442 \u0440\u044F\u0434\u043E\u043C
+      \u0441\u043E \u0441\u043A\u043B\u0430\u0434\u043E\u043C \u0438 \u043F\u043E\u043A\u0430
+      \u043F\u0443\u0441\u0442\u0430. \u0421\u043E \u0441\u043A\u043B\u0430\u0434\u0430
+      \u0441\u0435\u0439\u0447\u0430\u0441 \u043D\u0438\u0447\u0435\u0433\u043E \u0433\u0440\u0443\u0437\u0438\u0442\u044C
+      \u043D\u0435 \u043D\u0443\u0436\u043D\u043E: \u043E\u0442\u043F\u0440\u0430\u0432\u044C\u0442\u0435
+      \u0442\u0435\u043B\u0435\u0433\u0443 \u0432 \u043C\u0430\u0433\u0430\u0437\u0438\u043D.
+      \u041F\u043E\u043A\u0443\u043F\u043A\u0430 \u0438 \u0437\u0430\u0433\u0440\u0443\u0437\u043A\u0430
+      \u0431\u0443\u0434\u0443\u0442 \u043D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u043C
+      \u044D\u0442\u0430\u043F\u0435."
+  - locale: ru
+    key: ui.cart_dispatch.instruction.ready_store
+    text: "\u0422\u0435\u043B\u0435\u0433\u0430 \u0441\u0442\u043E\u0438\u0442 \u0443
+      \u0440\u044B\u043D\u043A\u0430 \u0432 \u0442\u043E\u0447\u043A\u0435 \u043F\u043E\u0433\u0440\u0443\u0437\u043A\u0438.
+      \u041D\u0430 \u044D\u0442\u0430\u043F\u0435 3.2 \u043D\u0430\u0436\u043C\u0438\u0442\u0435
+      \u043A\u043D\u043E\u043F\u043A\u0443, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C
+      \u0434\u043E\u0441\u0442\u0430\u0432\u043A\u0443 \u043A \u0441\u043A\u043B\u0430\u0434\u0443;
+      \u043F\u043E\u043A\u0443\u043F\u043A\u0430 \u0438 \u0432\u0438\u0434\u0438\u043C\u044B\u0439
+      \u0433\u0440\u0443\u0437 \u043F\u043E\u044F\u0432\u044F\u0442\u0441\u044F \u043D\u0430
+      \u044D\u0442\u0430\u043F\u0435 3.3."
+  - locale: ru
+    key: ui.cart_dispatch.instruction.go_warehouse
+    text: "\u0422\u0435\u043B\u0435\u0433\u0430 \u043D\u0430\u0445\u043E\u0434\u0438\u0442\u0441\u044F
+      \u041D\u0410 \u0421\u041A\u041B\u0410\u0414\u0415. \u0417\u0430\u043A\u0440\u043E\u0439\u0442\u0435
+      \u043E\u043A\u043D\u043E \u0438 \u043F\u043E\u0434\u043E\u0439\u0434\u0438\u0442\u0435
+      \u043A \u0432\u044B\u0441\u043E\u043A\u043E\u0439 \u043F\u043E\u0441\u0442\u0440\u043E\u0439\u043A\u0435
+      \u0441 \u043A\u0440\u0430\u043D\u043E\u043C \u0441\u043F\u0440\u0430\u0432\u0430."
+  - locale: ru
+    key: ui.cart_dispatch.instruction.go_store
+    text: "\u0422\u0435\u043B\u0435\u0433\u0430 \u043D\u0430\u0445\u043E\u0434\u0438\u0442\u0441\u044F
+      \u0423 \u041C\u0410\u0413\u0410\u0417\u0418\u041D\u0410. \u0417\u0430\u043A\u0440\u043E\u0439\u0442\u0435
+      \u043E\u043A\u043D\u043E \u0438 \u043F\u043E\u0434\u043E\u0439\u0434\u0438\u0442\u0435
+      \u043A \u043B\u0430\u0432\u043A\u0435 \u0441 \u0442\u043E\u0432\u0430\u0440\u0430\u043C\u0438
+      \u0441\u043B\u0435\u0432\u0430."
+  - locale: ru
+    key: ui.cart_dispatch.instruction.in_transit
+    text: "\u0422\u0435\u043B\u0435\u0433\u0430 \u0443\u0436\u0435 \u0432 \u043F\u0443\u0442\u0438.
+      \u0414\u043E\u0436\u0434\u0438\u0442\u0435\u0441\u044C \u0435\u0451 \u043F\u0440\u0438\u0431\u044B\u0442\u0438\u044F."
+  - locale: en
+    key: ui.cart_dispatch.current_station
+    text: 'You are at: {station}'
+  - locale: en
+    key: ui.cart_dispatch.instruction.ready_warehouse
+    text: 'The empty cart is beside the warehouse. Nothing is loaded here yet: send
+      it to the store. Purchasing and loading are handled in the next stage.'
+  - locale: en
+    key: ui.cart_dispatch.instruction.ready_store
+    text: The cart is parked at the market loading point. In Stage 3.2, use the button
+      to verify delivery to the warehouse; purchasing and visible cargo arrive in
+      Stage 3.3.
+  - locale: en
+    key: ui.cart_dispatch.instruction.go_warehouse
+    text: The cart is AT THE WAREHOUSE. Close this window and approach the tall crane
+      building on the right.
+  - locale: en
+    key: ui.cart_dispatch.instruction.go_store
+    text: The cart is AT THE STORE. Close this window and approach the market stall
+      on the left.
+  - locale: en
+    key: ui.cart_dispatch.instruction.in_transit
+    text: The cart is already traveling. Wait for it to arrive.
+  - locale: ru
+    key: ui.cart.world_label
+    text: "\u0422\u0415\u041B\u0415\u0413\u0410"
+  - locale: en
+    key: ui.cart.world_label
+    text: CART

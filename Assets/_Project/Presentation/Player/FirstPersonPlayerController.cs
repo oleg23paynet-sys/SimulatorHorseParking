@@ -21,6 +21,7 @@ namespace HorseParking.Presentation.Player
         private InteractWithTargetUseCase interactUseCase = null!;
         private float verticalVelocity;
         private float cameraPitch;
+        private bool uiInputBlocked;
 
         public void Configure(Camera cameraComponent, GameCompositionRoot compositionRoot)
         {
@@ -52,6 +53,11 @@ namespace HorseParking.Presentation.Player
         private void Update()
         {
             if (playerCamera == null)
+            {
+                return;
+            }
+
+            if (uiInputBlocked)
             {
                 return;
             }
@@ -99,7 +105,8 @@ namespace HorseParking.Presentation.Player
 
         private void HandleInteraction()
         {
-            if (!Input.GetButtonDown("Fire1") || interactUseCase == null)
+            var interactionPressed = Input.GetKeyDown(KeyCode.E) || Input.GetButtonDown("Fire1");
+            if (!interactionPressed || interactUseCase == null)
             {
                 return;
             }
@@ -128,5 +135,13 @@ namespace HorseParking.Presentation.Player
                 Cursor.visible = true;
             }
         }
+
+        public void SetUiInputBlocked(bool blocked)
+        {
+            uiInputBlocked = blocked;
+            Cursor.lockState = blocked ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = blocked;
+        }
+
     }
 }

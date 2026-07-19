@@ -46,6 +46,29 @@ Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/VoxelKnig
 Assets/_Project/Content/Materials/Characters/VoxelKnights/
 Assets/_Project/Content/Materials/Characters/VoxelKnights.meta
 Assets/_Project/Content/Materials/Characters/MountedClients/M_CompositionPreviewHorse.mat*
+
+# Downloaded source packages and duplicate source files. The game uses only the
+# curated Runtime FBX/textures referenced by ParkingMvpSceneBuilder.
+Assets/_Project/Content/Models/Characters/CartDriver/source/
+Assets/_Project/Content/Models/Characters/CartDriver/source.meta
+Assets/_Project/Content/Models/Characters/CartDriver/textures/
+Assets/_Project/Content/Models/Characters/CartDriver/textures.meta
+Assets/_Project/Content/Models/Characters/CartDriver/MedievalCivilian3/SourcePackage/
+Assets/_Project/Content/Models/Characters/CartDriver/MedievalCivilian3/SourcePackage.meta
+Assets/_Project/Content/Models/Characters/CartDriver/MedievalCivilian3/Runtime/Textures/*_gloss.png*
+Assets/_Project/Content/Models/Characters/CartDriver/MedievalCivilian3/Runtime/Textures/*_specular.png*
+Assets/_Project/Content/Models/Characters/CartDriver/MedievalCivilian3/SourceReference.txt*
+
+# Local delivery-cart archives and the obsolete cart iteration. The active
+# hand cart lives under DeliveryCart/Runtime/HandPushCart.
+Assets/_Project/Content/Vehicles/DeliveryCart/Source/
+Assets/_Project/Content/Vehicles/DeliveryCart/Source.meta
+Assets/_Project/Content/Vehicles/DeliveryCart/SM_DeliveryCart.fbx*
+Assets/_Project/Content/Vehicles/DeliveryCart/textures/
+Assets/_Project/Content/Vehicles/DeliveryCart/textures.meta
+Assets/_Project/Content/Vehicles/DeliveryCart/Materials/M_DeliveryCartPlanks.mat*
+Assets/_Project/Content/Vehicles/DeliveryCart/Runtime/HandPushCart/SourceReference.txt*
+Assets/_Project/Content/Vehicles/DeliveryCart/Runtime/HandPushCart/textures/*_Roughness.jpg*
 Assets/_Project/Presentation/Animation/Clips/
 Assets/_Project/Presentation/Animation/Clips.meta
 Assets/_Project/Presentation/Animation/Controllers/AC_VoxelHorse.controller*

@@ -1,12 +1,16 @@
 using System.Linq;
 using System.Collections.Generic;
 using HorseParking.Presentation.Composition;
+using HorseParking.Presentation.Logistics;
+using HorseParking.Presentation.Localization;
 using HorseParking.Presentation.Player;
 using HorseParking.Presentation.Parking;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
 namespace HorseParking.Presentation.Editor
@@ -15,6 +19,22 @@ namespace HorseParking.Presentation.Editor
     {
         private static float groundSurfaceY;
         private const string ScenePath = "Assets/_Project/Scenes/ParkingMvp.unity";
+        private const string LogisticsInventorySettingsPath = "Assets/_Project/Settings/LogisticsInventorySettings.asset";
+        private const string GameLocalizationSettingsPath = "Assets/_Project/Settings/GameLocalizationSettings.asset";
+        private const string DeliveryCartRuntimeFolder = "Assets/_Project/Content/Vehicles/DeliveryCart/Runtime/HandPushCart";
+        private const string DeliveryCartModelPath = DeliveryCartRuntimeFolder + "/SM_HandPushCart.fbx";
+        private const string DeliveryCartTextureFolder = DeliveryCartRuntimeFolder + "/textures";
+        private const string DeliveryCartWoodDiffusePath = DeliveryCartTextureFolder + "/Wood035_2K-JPG_Color.jpg";
+        private const string DeliveryCartWoodNormalPath = DeliveryCartTextureFolder + "/Wood035_2K-JPG_NormalGL.jpg";
+        private const string DeliveryCartFabricDiffusePath = DeliveryCartTextureFolder + "/YellowFabric.jpg";
+        private const string DeliveryCartFabricNormalPath = DeliveryCartTextureFolder + "/Fabric032_2K_NormalGL.jpg";
+        private const string DeliveryCartControllerPath = "Assets/_Project/Presentation/Animation/Controllers/AC_DeliveryCartWheels.controller";
+        private const string DeliveryCartDriverControllerPath = "Assets/_Project/Presentation/Animation/Controllers/AC_DeliveryCartDriver.controller";
+        private const string DeliveryCartMaterialFolder = "Assets/_Project/Content/Vehicles/DeliveryCart/Materials";
+        private const string CartDriverModelPath = "Assets/_Project/Content/Models/Characters/CartDriver/MedievalCivilian3/Runtime/CH_CartDriver.fbx";
+        private const string CartDriverRuntimeFolder = "Assets/_Project/Content/Models/Characters/CartDriver/MedievalCivilian3/Runtime";
+        private const string CartDriverTextureFolder = CartDriverRuntimeFolder + "/Textures";
+        private const string CartDriverMaterialFolder = CartDriverRuntimeFolder + "/Materials";
         private const string TerrainDataPath = "Assets/_Project/Content/Terrain/TerrainData_ParkingMvp.asset";
         private const string TerrainLayerPath = "Assets/_Project/Content/Terrain/TerrainLayer_ParkingMvpCobblestone.terrainlayer";
         private const string TerrainTexturePath = "Assets/_Project/Content/Models/Environment/ParkingGround/CobblestoneLowpoly/0.jpg";
@@ -70,7 +90,10 @@ namespace HorseParking.Presentation.Editor
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             CreateLighting();
             var compositionRoot = new GameObject("GameCompositionRoot").AddComponent<GameCompositionRoot>();
-            CreatePlayer(compositionRoot);
+            compositionRoot.ConfigureLogisticsInventory(LoadOrCreateLogisticsInventorySettings());
+            compositionRoot.ConfigureLocalization(LoadOrCreateGameLocalizationSettings());
+            var playerController = CreatePlayer(compositionRoot);
+            CreateLogisticsInventoryHud(compositionRoot);
             CreateGround();
             var parkingRouteObstacles = CreateParkingZone();
             var client = CreateClient(
@@ -91,12 +114,75 @@ namespace HorseParking.Presentation.Editor
                 exitAndPayment.gate,
                 exitAndPayment.sack,
                 parkingRouteObstacles);
-            CreateOperationsBuildings();
+            var operationsBuildings = CreateOperationsBuildings();
+            CreateStage32Logistics(
+                compositionRoot,
+                playerController,
+                operationsBuildings.store,
+                operationsBuildings.warehouse,
+                LoadOrCreateLogisticsInventorySettings(),
+                LoadOrCreateGameLocalizationSettings());
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
             Debug.Log("Parking MVP scene created at " + ScenePath);
+        }
+
+        [MenuItem("Horse Parking/Install Stage 3.1 Inventory")]
+        public static void InstallStage31Inventory()
+        {
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            var compositionRoot = Object.FindAnyObjectByType<GameCompositionRoot>();
+            if (compositionRoot == null)
+            {
+                throw new System.InvalidOperationException("ParkingMvp is missing GameCompositionRoot.");
+            }
+
+            compositionRoot.ConfigureLogisticsInventory(LoadOrCreateLogisticsInventorySettings());
+            compositionRoot.ConfigureLocalization(LoadOrCreateGameLocalizationSettings());
+            CreateLogisticsInventoryHud(compositionRoot);
+            EditorUtility.SetDirty(compositionRoot);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Stage 3.1 logistics inventory installed in " + ScenePath);
+        }
+
+        [MenuItem("Horse Parking/Install Stage 3.2 Cart Journey")]
+        public static void InstallStage32CartJourney()
+        {
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            var compositionRoot = Object.FindAnyObjectByType<GameCompositionRoot>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing GameCompositionRoot.");
+            var playerController = Object.FindAnyObjectByType<FirstPersonPlayerController>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing the first-person player.");
+            var store = GameObject.Find("MaterialStore_01")
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing MaterialStore_01.");
+            var warehouse = GameObject.Find("Warehouse_01")
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing Warehouse_01.");
+            var inventorySettings = LoadOrCreateLogisticsInventorySettings();
+            var localizationSettings = LoadOrCreateGameLocalizationSettings();
+
+            EnsureStage32Translations(localizationSettings);
+            compositionRoot.ConfigureLogisticsInventory(inventorySettings);
+            compositionRoot.ConfigureLocalization(localizationSettings);
+            CreateLogisticsInventoryHud(compositionRoot);
+            CreateStage32Logistics(
+                compositionRoot,
+                playerController,
+                store,
+                warehouse,
+                inventorySettings,
+                localizationSettings);
+
+            EditorUtility.SetDirty(compositionRoot);
+            EditorUtility.SetDirty(inventorySettings);
+            EditorUtility.SetDirty(localizationSettings);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Stage 3.2 automatic delivery cart journey installed in " + ScenePath);
         }
 
         private static void CreateLighting()
@@ -108,7 +194,7 @@ namespace HorseParking.Presentation.Editor
             lightObject.transform.rotation = Quaternion.Euler(48f, -28f, 0f);
         }
 
-        private static void CreatePlayer(GameCompositionRoot compositionRoot)
+        private static FirstPersonPlayerController CreatePlayer(GameCompositionRoot compositionRoot)
         {
             var player = new GameObject("Player_FirstPerson_NoHands");
             player.transform.position = new Vector3(0f, 1.1f, -13f);
@@ -124,6 +210,7 @@ namespace HorseParking.Presentation.Editor
             var cameraComponent = cameraObject.AddComponent<Camera>();
             cameraObject.AddComponent<AudioListener>();
             playerController.Configure(cameraComponent, compositionRoot);
+            return playerController;
         }
 
         private static void CreateGround()
@@ -872,7 +959,7 @@ namespace HorseParking.Presentation.Editor
             return fence;
         }
 
-        private static void CreateOperationsBuildings()
+        private static (GameObject store, GameObject warehouse) CreateOperationsBuildings()
         {
             var store = InstantiateAsset(StorePath, "MaterialStore_01");
             ScaleToWidth(store, 5f);
@@ -885,6 +972,671 @@ namespace HorseParking.Presentation.Editor
             warehouse.transform.position = new Vector3(7f, 0f, 2f);
             warehouse.transform.rotation = Quaternion.Euler(0f, -45f, 0f);
             PlaceBaseOnGround(warehouse);
+            return (store, warehouse);
+        }
+
+        private static void CreateStage32Logistics(
+            GameCompositionRoot compositionRoot,
+            FirstPersonPlayerController playerController,
+            GameObject store,
+            GameObject warehouse,
+            LogisticsInventorySettings inventorySettings,
+            GameLocalizationSettings localizationSettings)
+        {
+            var terrain = Terrain.activeTerrain;
+            if (terrain != null)
+            {
+                groundSurfaceY = terrain.transform.position.y + terrain.SampleHeight(Vector3.zero);
+            }
+
+            EnsureStage32Translations(localizationSettings);
+            var oldRuntime = GameObject.Find("Stage32_LogisticsJourney");
+            if (oldRuntime != null) Object.DestroyImmediate(oldRuntime);
+            var oldUi = GameObject.Find("CartDispatchUI");
+            if (oldUi != null) Object.DestroyImmediate(oldUi);
+            var oldPushUi = GameObject.Find("CartPushUI");
+            if (oldPushUi != null) Object.DestroyImmediate(oldPushUi);
+
+            AddMeshColliders(store);
+            AddMeshColliders(warehouse);
+            RemoveMissingScripts(store);
+            RemoveMissingScripts(warehouse);
+
+            var warehouseTarget = CreateCartDispatchTarget(warehouse, CartStationKind.Warehouse);
+            var storeTarget = CreateCartDispatchTarget(store, CartStationKind.MaterialStore);
+
+            var runtimeRoot = new GameObject("Stage32_LogisticsJourney");
+            var route = CreateDeliveryCartRoute(runtimeRoot.transform);
+            CreateDeliveryCartVehicle(
+                runtimeRoot.transform,
+                compositionRoot,
+                route,
+                inventorySettings.CartTravelSpeedMetersPerSecond);
+
+            var playerCamera = playerController.GetComponentInChildren<Camera>(true)
+                ?? throw new System.InvalidOperationException("First-person camera is missing.");
+            CreateStage32Ui(
+                compositionRoot,
+                playerController,
+                playerCamera,
+                warehouseTarget,
+                storeTarget,
+                inventorySettings.MaterialStoreId);
+        }
+
+        private static CartDispatchInteractionTarget CreateCartDispatchTarget(
+            GameObject building,
+            CartStationKind stationKind)
+        {
+            var target = building.GetComponent<CartDispatchInteractionTarget>()
+                ?? building.AddComponent<CartDispatchInteractionTarget>();
+            target.Configure(stationKind);
+            return target;
+        }
+
+        private static Transform[] CreateDeliveryCartRoute(Transform parent)
+        {
+            var positions = new[]
+            {
+                new Vector3(7.2f, groundSurfaceY, -3.8f),
+                new Vector3(3.5f, groundSurfaceY, -5.2f),
+                new Vector3(-3.5f, groundSurfaceY, -5.2f),
+                new Vector3(-7.2f, groundSurfaceY, -3.8f)
+            };
+            var names = new[]
+            {
+                "CartRoute_WarehouseDelivery",
+                "CartRoute_WarehouseApproach",
+                "CartRoute_StoreApproach",
+                "CartRoute_MaterialStoreLoading"
+            };
+            var route = new Transform[positions.Length];
+            for (var index = 0; index < positions.Length; index++)
+            {
+                route[index] = new GameObject(names[index]).transform;
+                route[index].SetParent(parent, false);
+                route[index].position = positions[index];
+                Vector3 direction;
+                if (index == 0)
+                {
+                    // The warehouse endpoint faces the direction in which the cart
+                    // arrives from route[1], so stopping never introduces a 180 turn.
+                    direction = positions[index] - positions[index + 1];
+                }
+                else if (index == positions.Length - 1)
+                {
+                    // The store endpoint faces the outbound arrival direction.
+                    direction = positions[index] - positions[index - 1];
+                }
+                else
+                {
+                    direction = positions[index + 1] - positions[index];
+                }
+                direction.y = 0f;
+                if (direction.sqrMagnitude > 0.001f)
+                {
+                    route[index].rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
+                }
+            }
+            return route;
+        }
+
+        private static GameObject CreateDeliveryCartVehicle(
+            Transform parent,
+            GameCompositionRoot compositionRoot,
+            Transform[] route,
+            float travelSpeed)
+        {
+            ConfigureDeliveryCartImport();
+            var vehicle = new GameObject("DeliveryCartVehicle_01");
+            vehicle.transform.SetParent(parent, false);
+            vehicle.transform.SetPositionAndRotation(route[0].position, route[0].rotation);
+
+            var cart = InstantiateAsset(DeliveryCartModelPath, "DeliveryCart_Visual");
+            cart.transform.SetParent(vehicle.transform, false);
+            var importedCartRotation = cart.transform.localRotation;
+            cart.transform.localPosition = Vector3.zero;
+            // Preserve only the FBX axis conversion. This hand-cart asset already
+            // points its physical handles toward the pusher; an extra Y=180 placed
+            // the wooden handles on the side opposite the driver's IK targets.
+            cart.transform.localRotation = importedCartRotation;
+            foreach (var renderer in cart.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.enabled = renderer.name.StartsWith(
+                    "HandCart_",
+                    System.StringComparison.OrdinalIgnoreCase);
+            }
+            ScaleToHorizontalLength(cart, 3.4f);
+            PlaceVisualBaseAtVehicleGround(cart, vehicle.transform.position.y + 0.03f);
+            ApplyDeliveryCartMaterials(cart);
+            var cartAnimator = cart.GetComponentInChildren<Animator>(true);
+            if (cartAnimator == null)
+            {
+                cartAnimator = cart.AddComponent<Animator>();
+            }
+            cartAnimator.runtimeAnimatorController = GetOrCreateDeliveryCartController();
+            cartAnimator.applyRootMotion = false;
+            cartAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+
+            var leftHandle = CreateCartGripTarget(
+                vehicle.transform,
+                "DeliveryCartLeftHandleGrip",
+                new Vector3(-0.42f, 1.03f, -1.58f),
+                new Vector3(0f, 0f, 88f));
+            var rightHandle = CreateCartGripTarget(
+                vehicle.transform,
+                "DeliveryCartRightHandleGrip",
+                new Vector3(0.42f, 1.03f, -1.58f),
+                new Vector3(0f, 0f, -88f));
+            var leftElbow = CreateCartGripTarget(
+                vehicle.transform,
+                "DeliveryCartLeftElbowHint",
+                new Vector3(-0.68f, 1.28f, -1.92f),
+                Vector3.zero);
+            var rightElbow = CreateCartGripTarget(
+                vehicle.transform,
+                "DeliveryCartRightElbowHint",
+                new Vector3(0.68f, 1.28f, -1.92f),
+                Vector3.zero);
+
+            ConfigureDeliveryCartDriverImport();
+            var pushPoint = new GameObject("DeliveryCartDriverPushPoint").transform;
+            pushPoint.SetParent(vehicle.transform, false);
+            pushPoint.localPosition = new Vector3(0f, 0f, -2.12f);
+            pushPoint.localRotation = Quaternion.identity;
+
+            var driver = InstantiateAsset(CartDriverModelPath, "DeliveryCartDriver_01");
+            driver.transform.SetParent(pushPoint, false);
+            RemoveMissingScripts(driver);
+            foreach (var renderer in driver.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.enabled = renderer.name.IndexOf(
+                    "civilian",
+                    System.StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+            ApplyDeliveryCartDriverMaterials(driver);
+            ScaleEnabledRenderersToHeight(driver, 1.72f);
+            driver.transform.localPosition = Vector3.zero;
+            driver.transform.localRotation = Quaternion.identity;
+            PlaceVisualBaseAtVehicleGround(driver, vehicle.transform.position.y + 0.03f);
+            var driverAnimator = driver.GetComponent<Animator>();
+            if (driverAnimator == null)
+            {
+                driverAnimator = driver.AddComponent<Animator>();
+            }
+            driverAnimator.runtimeAnimatorController = GetOrCreateDeliveryCartDriverController();
+            driverAnimator.applyRootMotion = false;
+            driverAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            var handleIk = driver.GetComponent<CartDriverHandleIk>()
+                ?? driver.AddComponent<CartDriverHandleIk>();
+            handleIk.Configure(leftHandle, rightHandle, leftElbow, rightElbow);
+
+            var visualAdapter = vehicle.AddComponent<DeliveryCartVisualAdapter>();
+            visualAdapter.Configure(cartAnimator, driverAnimator);
+            var journeyPresenter = vehicle.AddComponent<DeliveryCartJourneyPresenter>();
+            journeyPresenter.Configure(
+                compositionRoot,
+                vehicle.transform,
+                route,
+                visualAdapter,
+                travelSpeed);
+            return vehicle;
+        }
+
+        private static Transform CreateCartGripTarget(
+            Transform parent,
+            string name,
+            Vector3 localPosition,
+            Vector3 localEulerAngles)
+        {
+            var target = new GameObject(name).transform;
+            target.SetParent(parent, false);
+            target.localPosition = localPosition;
+            target.localRotation = Quaternion.Euler(localEulerAngles);
+            return target;
+        }
+
+        private static void ConfigureDeliveryCartDriverImport()
+        {
+            var importer = AssetImporter.GetAtPath(CartDriverModelPath) as ModelImporter;
+            if (importer == null)
+            {
+                throw new System.InvalidOperationException(
+                    "Downloaded cart driver FBX is missing: " + CartDriverModelPath);
+            }
+
+            importer.importAnimation = false;
+            importer.importCameras = false;
+            importer.importLights = false;
+            importer.animationType = ModelImporterAnimationType.Human;
+            importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+            importer.SaveAndReimport();
+            ConfigureHorseAnimsetRiderImports();
+        }
+
+        private static void ApplyDeliveryCartDriverMaterials(GameObject driver)
+        {
+            EnsureFolder(CartDriverMaterialFolder);
+            var slots = new[] { "Body", "Bottom", "Moustache", "Shoes", "Top", "Beard", "Hair" };
+            var materials = slots.ToDictionary(
+                slot => slot,
+                CreateDeliveryCartDriverMaterial,
+                System.StringComparer.OrdinalIgnoreCase);
+
+            foreach (var renderer in driver.GetComponentsInChildren<Renderer>(true))
+            {
+                if (!renderer.enabled)
+                {
+                    continue;
+                }
+
+                var assigned = renderer.sharedMaterials;
+                for (var index = 0; index < assigned.Length; index++)
+                {
+                    var importedName = assigned[index] != null ? assigned[index].name : string.Empty;
+                    if (materials.TryGetValue(importedName, out var material))
+                    {
+                        assigned[index] = material;
+                    }
+                    else if (index < slots.Length)
+                    {
+                        assigned[index] = materials[slots[index]];
+                    }
+                }
+                renderer.sharedMaterials = assigned;
+            }
+        }
+
+        private static Material CreateDeliveryCartDriverMaterial(string slot)
+        {
+            var materialPath = CartDriverMaterialFolder + "/M_CartDriver_" + slot + ".mat";
+            AssetDatabase.DeleteAsset(materialPath);
+            var shader = Shader.Find("Standard")
+                ?? throw new System.InvalidOperationException("Built-in Standard shader is unavailable.");
+            var material = new Material(shader) { name = "M_CartDriver_" + slot };
+            var texturePrefix = CartDriverTextureFolder + "/civilian 3_" + slot;
+            var diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(texturePrefix + "_diffuse.png");
+            var normalPath = texturePrefix + "_normal.png";
+            ConfigureNormalTexture(normalPath);
+            var normal = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
+            if (diffuse != null)
+            {
+                material.SetTexture("_MainTex", diffuse);
+            }
+            if (normal != null)
+            {
+                material.SetTexture("_BumpMap", normal);
+                material.EnableKeyword("_NORMALMAP");
+            }
+            material.SetFloat("_Glossiness", 0.2f);
+            AssetDatabase.CreateAsset(material, materialPath);
+            return material;
+        }
+
+        private static void ConfigureNormalTexture(string path)
+        {
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer != null && importer.textureType != TextureImporterType.NormalMap)
+            {
+                importer.textureType = TextureImporterType.NormalMap;
+                importer.SaveAndReimport();
+            }
+        }
+
+        private static AnimatorController GetOrCreateDeliveryCartDriverController()
+        {
+            EnsureFolder("Assets/_Project/Presentation/Animation");
+            EnsureFolder("Assets/_Project/Presentation/Animation/Controllers");
+            AssetDatabase.DeleteAsset(DeliveryCartDriverControllerPath);
+            var controller = AnimatorController.CreateAnimatorControllerAtPath(DeliveryCartDriverControllerPath);
+            controller.AddParameter("IsMoving", AnimatorControllerParameterType.Bool);
+            var stateMachine = controller.layers[0].stateMachine;
+            var layers = controller.layers;
+            layers[0].iKPass = true;
+            controller.layers = layers;
+            var idle = stateMachine.AddState("DriverPushIdle");
+            idle.motion = LoadHorseAnimsetClip(HorseAnimsetRiderOnFootIdlePath, "S_Idle");
+            var walk = stateMachine.AddState("DriverPushWalk");
+            walk.motion = LoadHorseAnimsetClip(HorseAnimsetRiderOnFootWalkPath, "S_Walk_F");
+            stateMachine.defaultState = idle;
+
+            var beginWalk = idle.AddTransition(walk);
+            beginWalk.AddCondition(AnimatorConditionMode.If, 0f, "IsMoving");
+            beginWalk.hasExitTime = false;
+            beginWalk.duration = 0.10f;
+            var stopWalk = walk.AddTransition(idle);
+            stopWalk.AddCondition(AnimatorConditionMode.IfNot, 0f, "IsMoving");
+            stopWalk.hasExitTime = false;
+            stopWalk.duration = 0.10f;
+            AssetDatabase.SaveAssets();
+            return controller;
+        }
+
+        private static void RemoveMissingScripts(GameObject root)
+        {
+            foreach (var transform in root.GetComponentsInChildren<Transform>(true))
+            {
+                GameObjectUtility.RemoveMonoBehavioursWithMissingScript(transform.gameObject);
+            }
+        }
+
+        private static void ConfigureDeliveryCartImport()
+        {
+            var importer = AssetImporter.GetAtPath(DeliveryCartModelPath) as ModelImporter;
+            if (importer == null)
+            {
+                throw new System.InvalidOperationException("Converted delivery cart FBX is missing: " + DeliveryCartModelPath);
+            }
+
+            importer.importAnimation = true;
+            importer.importCameras = false;
+            importer.importLights = false;
+            importer.animationType = ModelImporterAnimationType.Generic;
+            importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+            var clips = importer.defaultClipAnimations;
+            foreach (var clip in clips)
+            {
+                clip.loopTime = true;
+                clip.loopPose = true;
+                clip.keepOriginalPositionXZ = true;
+                clip.keepOriginalPositionY = true;
+                clip.lockRootPositionXZ = true;
+                clip.lockRootHeightY = true;
+                clip.lockRootRotation = true;
+            }
+            importer.clipAnimations = clips;
+            importer.SaveAndReimport();
+        }
+
+        private static AnimatorController GetOrCreateDeliveryCartController()
+        {
+            EnsureFolder("Assets/_Project/Presentation/Animation");
+            EnsureFolder("Assets/_Project/Presentation/Animation/Controllers");
+            AssetDatabase.DeleteAsset(DeliveryCartControllerPath);
+            var controller = AnimatorController.CreateAnimatorControllerAtPath(DeliveryCartControllerPath);
+            var clip = AssetDatabase.LoadAllAssetsAtPath(DeliveryCartModelPath)
+                .OfType<AnimationClip>()
+                .FirstOrDefault(candidate => candidate.name.Equals(
+                    "Cart_Pull",
+                    System.StringComparison.OrdinalIgnoreCase)
+                    && candidate.length > 1f)
+                ?? AssetDatabase.LoadAllAssetsAtPath(DeliveryCartModelPath)
+                    .OfType<AnimationClip>()
+                    .FirstOrDefault(candidate => candidate.name.IndexOf(
+                        "Cart_Pull",
+                        System.StringComparison.OrdinalIgnoreCase) >= 0
+                        && candidate.length > 0.1f);
+            if (clip == null)
+            {
+                throw new System.InvalidOperationException("Hand push cart FBX has no Cart_Pull animation clip.");
+            }
+
+            var state = controller.layers[0].stateMachine.AddState("CartPull");
+            state.motion = clip;
+            controller.layers[0].stateMachine.defaultState = state;
+            AssetDatabase.SaveAssets();
+            return controller;
+        }
+
+        private static void ApplyDeliveryCartMaterials(GameObject cart)
+        {
+            EnsureFolder(DeliveryCartMaterialFolder);
+            ConfigureNormalTexture(DeliveryCartWoodNormalPath);
+            ConfigureNormalTexture(DeliveryCartFabricNormalPath);
+            var wood = CreateDeliveryCartMaterial(
+                "M_DeliveryCartWood",
+                DeliveryCartWoodDiffusePath,
+                DeliveryCartWoodNormalPath);
+            var fabric = CreateDeliveryCartMaterial(
+                "M_DeliveryCartFabric",
+                DeliveryCartFabricDiffusePath,
+                DeliveryCartFabricNormalPath);
+            foreach (var renderer in cart.GetComponentsInChildren<Renderer>(true))
+            {
+                var materials = renderer.sharedMaterials;
+                for (var index = 0; index < materials.Length; index++)
+                {
+                    materials[index] = materials[index] != null
+                        && materials[index].name.IndexOf(
+                            "Cloth",
+                            System.StringComparison.OrdinalIgnoreCase) >= 0
+                            ? fabric
+                            : wood;
+                }
+                renderer.sharedMaterials = materials;
+            }
+        }
+
+        private static Material CreateDeliveryCartMaterial(string name, string diffusePath, string normalPath)
+        {
+            var path = DeliveryCartMaterialFolder + "/" + name + ".mat";
+            AssetDatabase.DeleteAsset(path);
+            var shader = Shader.Find("Standard")
+                ?? throw new System.InvalidOperationException("Built-in Standard shader is unavailable.");
+            var material = new Material(shader) { name = name };
+            material.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(diffusePath));
+            var normal = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
+            if (normal != null)
+            {
+                material.SetTexture("_BumpMap", normal);
+                material.EnableKeyword("_NORMALMAP");
+            }
+            material.SetFloat("_Glossiness", 0.18f);
+            AssetDatabase.CreateAsset(material, path);
+            return material;
+        }
+
+        private static void PlaceVisualBaseAtVehicleGround(GameObject visual, float surfaceY)
+        {
+            var bounds = GetEnabledRendererBounds(visual);
+            visual.transform.position += Vector3.up * (surfaceY - bounds.min.y);
+        }
+
+        private static void CreateStage32Ui(
+            GameCompositionRoot compositionRoot,
+            FirstPersonPlayerController playerController,
+            Camera playerCamera,
+            CartDispatchInteractionTarget warehouseTarget,
+            CartDispatchInteractionTarget storeTarget,
+            string materialStoreId)
+        {
+            if (Object.FindAnyObjectByType<EventSystem>() == null)
+            {
+                new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            }
+
+            var canvasObject = new GameObject(
+                "CartDispatchUI",
+                typeof(Canvas),
+                typeof(CanvasScaler),
+                typeof(GraphicRaycaster));
+            var canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 40;
+            var scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1280f, 720f);
+            scaler.matchWidthOrHeight = 0.5f;
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            var objectivePanel = new GameObject(
+                "CartObjectivePanel",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            objectivePanel.transform.SetParent(canvasObject.transform, false);
+            var objectiveRect = objectivePanel.GetComponent<RectTransform>();
+            objectiveRect.anchorMin = objectiveRect.anchorMax = objectiveRect.pivot = new Vector2(0.5f, 1f);
+            objectiveRect.anchoredPosition = new Vector2(0f, -18f);
+            objectiveRect.sizeDelta = new Vector2(1120f, 86f);
+            objectivePanel.GetComponent<Image>().color = new Color(0.04f, 0.025f, 0.015f, 0.9f);
+            var prompt = CreateCentredText(
+                objectivePanel.transform,
+                "InteractionPrompt",
+                font,
+                28,
+                Vector2.zero,
+                new Vector2(1080f, 74f));
+            prompt.alignment = TextAnchor.MiddleCenter;
+            var promptHud = canvasObject.AddComponent<InteractionPromptHud>();
+            promptHud.Configure(playerCamera, compositionRoot, prompt, 3f);
+
+            var panelRoot = new GameObject("CartDispatchPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            panelRoot.transform.SetParent(canvasObject.transform, false);
+            var panelRect = panelRoot.GetComponent<RectTransform>();
+            panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.sizeDelta = new Vector2(820f, 500f);
+            panelRoot.GetComponent<Image>().color = new Color(0.035f, 0.02f, 0.012f, 0.98f);
+
+            var title = CreateCentredText(panelRoot.transform, "Title", font, 38, new Vector2(0f, 195f), new Vector2(760f, 58f));
+            var station = CreateCentredText(panelRoot.transform, "Station", font, 30, new Vector2(0f, 125f), new Vector2(740f, 52f));
+            var status = CreateCentredText(panelRoot.transform, "Status", font, 28, new Vector2(0f, 72f), new Vector2(740f, 48f));
+            var instruction = CreateCentredText(panelRoot.transform, "Instruction", font, 25, new Vector2(0f, 10f), new Vector2(720f, 78f));
+            instruction.horizontalOverflow = HorizontalWrapMode.Wrap;
+            instruction.verticalOverflow = VerticalWrapMode.Overflow;
+            var action = CreateUiButton(panelRoot.transform, "ActionButton", font, new Vector2(0f, -92f), new Vector2(620f, 70f));
+            var close = CreateUiButton(panelRoot.transform, "CloseButton", font, new Vector2(0f, -190f), new Vector2(280f, 58f));
+
+            var dispatchPanel = canvasObject.AddComponent<CartDispatchPanel>();
+            dispatchPanel.Configure(
+                compositionRoot,
+                playerController,
+                warehouseTarget,
+                storeTarget,
+                panelRoot,
+                title,
+                station,
+                status,
+                instruction,
+                action.button,
+                action.label,
+                close.button,
+                close.label,
+                materialStoreId);
+        }
+
+        private static (Button button, Text label) CreateUiButton(
+            Transform parent,
+            string name,
+            Font font,
+            Vector2 anchoredPosition,
+            Vector2 size)
+        {
+            var buttonObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(parent, false);
+            var rect = buttonObject.GetComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = size;
+            var image = buttonObject.GetComponent<Image>();
+            image.color = new Color(0.55f, 0.29f, 0.08f, 1f);
+            var button = buttonObject.GetComponent<Button>();
+            button.targetGraphic = image;
+            var label = CreateCentredText(buttonObject.transform, "Label", font, 26, Vector2.zero, size - new Vector2(20f, 10f));
+            return (button, label);
+        }
+
+        private static Text CreateCentredText(
+            Transform parent,
+            string name,
+            Font font,
+            int fontSize,
+            Vector2 anchoredPosition,
+            Vector2 size)
+        {
+            var textObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Outline));
+            textObject.transform.SetParent(parent, false);
+            var rect = textObject.GetComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = size;
+            var text = textObject.GetComponent<Text>();
+            text.font = font;
+            text.fontSize = fontSize;
+            text.color = new Color(1f, 0.96f, 0.82f, 1f);
+            text.alignment = TextAnchor.MiddleCenter;
+            text.raycastTarget = false;
+            var outline = textObject.GetComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.95f);
+            outline.effectDistance = new Vector2(1f, -1f);
+            return text;
+        }
+
+        private static void EnsureStage32Translations(GameLocalizationSettings settings)
+        {
+            var manualKeys = new[]
+            {
+                "interaction.cart.push",
+                "interaction.cart.release",
+                "interaction.cart.target",
+                "interaction.cart.grabbed",
+                "interaction.cart.released",
+                "interaction.cart.unavailable"
+            };
+            foreach (var locale in new[] { "ru", "en" })
+            {
+                foreach (var key in manualKeys)
+                {
+                    settings.RemoveTranslation(locale, key);
+                }
+            }
+
+            var entries = new[]
+            {
+                ("ru", "ui.cart.status", "Телега: {state}"),
+                ("ru", "cart.state.at_warehouse", "на складе"),
+                ("ru", "cart.state.traveling_to_store", "едет в магазин"),
+                ("ru", "cart.state.at_store", "у магазина"),
+                ("ru", "cart.state.returning_to_warehouse", "возвращается на склад"),
+                ("ru", "cart.state.unknown", "неизвестно"),
+                ("ru", "ui.cart_dispatch.title", "Управление телегой"),
+                ("ru", "ui.cart_dispatch.current_station", "Вы у: {station}"),
+                ("ru", "ui.cart_dispatch.send_to_store", "Отправить в магазин материалов"),
+                ("ru", "ui.cart_dispatch.return_to_warehouse", "Доставить товар на склад"),
+                ("ru", "ui.cart_dispatch.instruction.ready_warehouse", "Телега стоит рядом со складом и пока пуста. Со склада сейчас ничего грузить не нужно: отправьте телегу в магазин. Покупка и загрузка будут на следующем этапе."),
+                ("ru", "ui.cart_dispatch.instruction.ready_store", "Телега стоит у рынка в точке погрузки. На этапе 3.2 нажмите кнопку, чтобы проверить доставку к складу; покупка и видимый груз появятся на этапе 3.3."),
+                ("ru", "ui.cart_dispatch.instruction.go_warehouse", "Телега находится НА СКЛАДЕ. Закройте окно и подойдите к высокой постройке с краном справа."),
+                ("ru", "ui.cart_dispatch.instruction.go_store", "Телега находится У МАГАЗИНА. Закройте окно и подойдите к лавке с товарами слева."),
+                ("ru", "ui.cart_dispatch.instruction.in_transit", "Телега уже в пути. Дождитесь её прибытия."),
+                ("ru", "ui.common.close", "Закрыть"),
+                ("ru", "location.warehouse", "Склад"),
+                ("ru", "location.material_store", "Магазин материалов"),
+                ("ru", "interaction.cart.manage", "Управлять телегой"),
+                ("ru", "interaction.cart.opened", "Управление телегой открыто"),
+                ("ru", "ui.interaction.prompt", "[E] {action}: {target}"),
+                ("ru", "ui.cart.guide.warehouse", "ТОЧКА ДОСТАВКИ: СКЛАД — высокая постройка с краном справа."),
+                ("ru", "ui.cart.guide.store", "ТЕЛЕГА У РЫНКА МАТЕРИАЛОВ — возница стоит за рукоятками. Подойдите к лавке и нажмите E, чтобы отправить её к складу."),
+                ("ru", "ui.cart.world_label", "ТЕЛЕГА"),
+                ("en", "ui.cart.status", "Cart: {state}"),
+                ("en", "cart.state.at_warehouse", "at warehouse"),
+                ("en", "cart.state.traveling_to_store", "traveling to material store"),
+                ("en", "cart.state.at_store", "at material store"),
+                ("en", "cart.state.returning_to_warehouse", "returning to warehouse"),
+                ("en", "cart.state.unknown", "unknown"),
+                ("en", "ui.cart_dispatch.title", "Cart management"),
+                ("en", "ui.cart_dispatch.current_station", "You are at: {station}"),
+                ("en", "ui.cart_dispatch.send_to_store", "Send to material store"),
+                ("en", "ui.cart_dispatch.return_to_warehouse", "Deliver goods to warehouse"),
+                ("en", "ui.cart_dispatch.instruction.ready_warehouse", "The empty cart is beside the warehouse. Nothing is loaded here yet: send it to the store. Purchasing and loading are handled in the next stage."),
+                ("en", "ui.cart_dispatch.instruction.ready_store", "The cart is parked at the market loading point. In Stage 3.2, use the button to verify delivery to the warehouse; purchasing and visible cargo arrive in Stage 3.3."),
+                ("en", "ui.cart_dispatch.instruction.go_warehouse", "The cart is AT THE WAREHOUSE. Close this window and approach the tall crane building on the right."),
+                ("en", "ui.cart_dispatch.instruction.go_store", "The cart is AT THE STORE. Close this window and approach the market stall on the left."),
+                ("en", "ui.cart_dispatch.instruction.in_transit", "The cart is already traveling. Wait for it to arrive."),
+                ("en", "ui.common.close", "Close"),
+                ("en", "location.warehouse", "Warehouse"),
+                ("en", "location.material_store", "Material store"),
+                ("en", "interaction.cart.manage", "Manage cart"),
+                ("en", "interaction.cart.opened", "Cart management opened"),
+                ("en", "ui.interaction.prompt", "[E] {action}: {target}"),
+                ("en", "ui.cart.guide.warehouse", "DELIVERY POINT: WAREHOUSE — the tall crane building on the right."),
+                ("en", "ui.cart.guide.store", "CART AT MATERIAL MARKET — the driver is behind its handles. Approach the stall and press E to send it to the warehouse."),
+                ("en", "ui.cart.world_label", "CART")
+            };
+            foreach (var entry in entries)
+            {
+                settings.EnsureTranslation(entry.Item1, entry.Item2, entry.Item3);
+            }
+            EditorUtility.SetDirty(settings);
         }
 
         private static GameObject InstantiateAsset(string assetPath, string instanceName)
@@ -1019,6 +1771,112 @@ namespace HorseParking.Presentation.Editor
             var parentPath = System.IO.Path.GetDirectoryName(path)?.Replace('\\', '/');
             var folderName = System.IO.Path.GetFileName(path);
             AssetDatabase.CreateFolder(parentPath!, folderName);
+        }
+
+        private static LogisticsInventorySettings LoadOrCreateLogisticsInventorySettings()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<LogisticsInventorySettings>(LogisticsInventorySettingsPath);
+            if (settings != null)
+            {
+                return settings;
+            }
+
+            EnsureFolder("Assets/_Project/Settings");
+            settings = ScriptableObject.CreateInstance<LogisticsInventorySettings>();
+            AssetDatabase.CreateAsset(settings, LogisticsInventorySettingsPath);
+            AssetDatabase.SaveAssets();
+            return settings;
+        }
+
+        private static GameLocalizationSettings LoadOrCreateGameLocalizationSettings()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<GameLocalizationSettings>(GameLocalizationSettingsPath);
+            if (settings != null)
+            {
+                return settings;
+            }
+
+            EnsureFolder("Assets/_Project/Settings");
+            settings = ScriptableObject.CreateInstance<GameLocalizationSettings>();
+            AssetDatabase.CreateAsset(settings, GameLocalizationSettingsPath);
+            AssetDatabase.SaveAssets();
+            return settings;
+        }
+
+        private static void CreateLogisticsInventoryHud(GameCompositionRoot compositionRoot)
+        {
+            var existing = GameObject.Find("LogisticsInventoryHUD");
+            if (existing != null)
+            {
+                Object.DestroyImmediate(existing);
+            }
+
+            var canvasObject = new GameObject("LogisticsInventoryHUD", typeof(Canvas), typeof(CanvasScaler));
+            var canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 20;
+
+            var scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.5f;
+
+            var panelObject = new GameObject("LogisticsInventoryPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            panelObject.transform.SetParent(canvasObject.transform, false);
+            var panelRect = panelObject.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0f, 1f);
+            panelRect.anchorMax = new Vector2(0f, 1f);
+            panelRect.pivot = new Vector2(0f, 1f);
+            panelRect.anchoredPosition = new Vector2(24f, -24f);
+            panelRect.sizeDelta = new Vector2(360f, 354f);
+            panelObject.GetComponent<Image>().color = new Color(0.10f, 0.065f, 0.035f, 0.88f);
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var headerText = CreateHudText(panelObject.transform, "Title", font, 24, FontStyle.Bold, new Vector2(16f, -12f), new Vector2(328f, 34f));
+            headerText.alignment = TextAnchor.MiddleLeft;
+
+            var warehouseText = CreateHudText(panelObject.transform, "WarehouseInventory", font, 18, FontStyle.Normal, new Vector2(16f, -54f), new Vector2(328f, 112f));
+            var cartText = CreateHudText(panelObject.transform, "CartInventory", font, 18, FontStyle.Normal, new Vector2(16f, -178f), new Vector2(328f, 112f));
+            var journeyText = CreateHudText(panelObject.transform, "CartJourneyStatus", font, 18, FontStyle.Bold, new Vector2(16f, -302f), new Vector2(328f, 34f));
+
+            var hud = canvasObject.AddComponent<LogisticsInventoryHud>();
+            hud.Configure(compositionRoot, headerText, warehouseText, cartText, journeyText);
+        }
+
+        private static Text CreateHudText(
+            Transform parent,
+            string name,
+            Font font,
+            int fontSize,
+            FontStyle fontStyle,
+            Vector2 anchoredPosition,
+            Vector2 size)
+        {
+            var textObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Shadow));
+            textObject.transform.SetParent(parent, false);
+            var rect = textObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = size;
+
+            var text = textObject.GetComponent<Text>();
+            text.font = font;
+            text.fontSize = fontSize;
+            text.fontStyle = fontStyle;
+            text.color = new Color(0.96f, 0.88f, 0.68f, 1f);
+            text.alignment = TextAnchor.UpperLeft;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.raycastTarget = false;
+            text.supportRichText = false;
+
+            var shadow = textObject.GetComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.75f);
+            shadow.effectDistance = new Vector2(1f, -1f);
+            return text;
         }
 
         private static void ScaleToHorizontalLength(GameObject root, float desiredLength)

@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbf70027bccd12b4aa86adba6d40d913, type: 3}
+  m_Name: LogisticsInventorySettings
+  m_EditorClassIdentifier: HorseParking.Presentation::HorseParking.Presentation.Logistics.LogisticsInventorySettings
+  warehouseId: warehouse-main
+  warehouseCapacityUnits: 200
+  cartId: cart-starter
+  cartCapacityUnits: 12
+  materialStoreId: material-store
+  materialStoreNameKey: location.material_store
+  cartTravelSpeedMetersPerSecond: 2.2
+  resources:
+  - id: wood
+    displayNameKey: resource.wood
+    capacityPerUnit: 1
+    initialWarehouseQuantity: 0
+    initialCartQuantity: 0
+  - id: stone
+    displayNameKey: resource.stone
+    capacityPerUnit: 1
+    initialWarehouseQuantity: 0
+    initialCartQuantity: 0
+  - id: iron
+    displayNameKey: resource.iron
+    capacityPerUnit: 2
+    initialWarehouseQuantity: 0
+    initialCartQuantity: 0
