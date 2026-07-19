@@ -21,12 +21,14 @@ namespace HorseParking.Presentation.Logistics
             [Min(1)] [SerializeField] private int capacityPerUnit = 1;
             [Min(0)] [SerializeField] private int initialWarehouseQuantity;
             [Min(0)] [SerializeField] private int initialCartQuantity;
+            [Min(1)] [SerializeField] private int storePriceGold = 2;
 
-            public ResourceSeed(string id, string displayNameKey, int capacityPerUnit)
+            public ResourceSeed(string id, string displayNameKey, int capacityPerUnit, int priceGold)
             {
                 this.id = id;
                 this.displayNameKey = displayNameKey;
                 this.capacityPerUnit = capacityPerUnit;
+                storePriceGold = priceGold;
             }
 
             public ResourceDefinition CreateDefinition()
@@ -39,20 +41,22 @@ namespace HorseParking.Presentation.Logistics
 
             public int InitialWarehouseQuantity => initialWarehouseQuantity;
             public int InitialCartQuantity => initialCartQuantity;
+            public int StorePriceGold => storePriceGold;
         }
 
         [SerializeField] private string warehouseId = "warehouse-main";
         [Min(1)] [SerializeField] private int warehouseCapacityUnits = 200;
         [SerializeField] private string cartId = "cart-starter";
         [Min(1)] [SerializeField] private int cartCapacityUnits = 12;
+        [Min(0)] [SerializeField] private int startingGold = 30;
         [SerializeField] private string materialStoreId = "material-store";
         [SerializeField] private string materialStoreNameKey = "location.material_store";
         [Min(0.1f)] [SerializeField] private float cartTravelSpeedMetersPerSecond = 2.2f;
         [SerializeField] private List<ResourceSeed> resources = new List<ResourceSeed>
         {
-            new ResourceSeed("wood", "resource.wood", 1),
-            new ResourceSeed("stone", "resource.stone", 1),
-            new ResourceSeed("iron", "resource.iron", 2)
+            new ResourceSeed("wood", "resource.wood", 1, 2),
+            new ResourceSeed("stone", "resource.stone", 1, 3),
+            new ResourceSeed("iron", "resource.iron", 2, 5)
         };
 
         public string MaterialStoreId => materialStoreId;
@@ -63,9 +67,12 @@ namespace HorseParking.Presentation.Logistics
             out CartJourneyUseCase journeyUseCase)
         {
             var definitions = new List<ResourceDefinition>(resources.Count);
+            var storePrices = new Dictionary<ResourceId, int>();
             foreach (var resource in resources)
             {
-                definitions.Add(resource.CreateDefinition());
+                var definition = resource.CreateDefinition();
+                definitions.Add(definition);
+                storePrices.Add(definition.Id, resource.StorePriceGold);
             }
 
             var catalog = new ResourceCatalog(definitions);
@@ -93,7 +100,7 @@ namespace HorseParking.Presentation.Logistics
                 throw new InvalidOperationException("Could not place the starter cart at the material store.");
             }
 
-            inventoryUseCase = new LogisticsInventoryUseCase(catalog, warehouse, cart);
+            inventoryUseCase = new LogisticsInventoryUseCase(catalog, warehouse, cart, storePrices, startingGold);
             journeyUseCase = new CartJourneyUseCase(
                 cart,
                 new[] { materialStore });

@@ -29,6 +29,29 @@ namespace HorseParking.Core.Logistics
         public static InventoryOperationResult Failure(InventoryFailureReason reason) => new InventoryOperationResult(reason);
     }
 
+    public enum PurchaseFailureReason
+    {
+        None = 0,
+        UnknownResource = 1,
+        InsufficientGold = 2,
+        InsufficientCartCapacity = 3
+    }
+
+    public readonly struct PurchaseResult
+    {
+        private PurchaseResult(PurchaseFailureReason failureReason, int remainingGold)
+        {
+            FailureReason = failureReason;
+            RemainingGold = remainingGold;
+        }
+
+        public bool Succeeded => FailureReason == PurchaseFailureReason.None;
+        public PurchaseFailureReason FailureReason { get; }
+        public int RemainingGold { get; }
+        public static PurchaseResult Success(int remainingGold) => new PurchaseResult(PurchaseFailureReason.None, remainingGold);
+        public static PurchaseResult Failure(PurchaseFailureReason reason, int remainingGold) => new PurchaseResult(reason, remainingGold);
+    }
+
     /// <summary>Capacity-limited resource storage with atomic transfers.</summary>
     public sealed class ResourceInventory
     {

@@ -61,6 +61,7 @@ namespace HorseParking.Presentation.Logistics
             }
 
             journeyUseCase = compositionRoot.CartJourneyUseCase;
+            visualAdapter.BindInventory(compositionRoot);
             var initialState = journeyUseCase.GetSnapshot().State;
             BeginState(initialState);
             observedState = initialState;

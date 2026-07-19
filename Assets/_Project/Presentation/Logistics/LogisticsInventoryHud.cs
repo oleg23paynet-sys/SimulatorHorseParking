@@ -20,6 +20,7 @@ namespace HorseParking.Presentation.Logistics
         private static readonly LocalizationKey CapacityKey = new LocalizationKey("ui.inventory.capacity");
         private static readonly LocalizationKey ResourceLineKey = new LocalizationKey("ui.inventory.resource_line");
         private static readonly LocalizationKey JourneyStatusKey = new LocalizationKey("ui.cart.status");
+        private static readonly LocalizationKey TitleGoldKey = new LocalizationKey("ui.logistics.title_gold");
 
         [SerializeField] private GameCompositionRoot compositionRoot = null!;
         [SerializeField] private Text headerText = null!;
@@ -72,7 +73,13 @@ namespace HorseParking.Presentation.Logistics
             var localization = compositionRoot.LocalizationService;
             var inventory = compositionRoot.LogisticsInventoryUseCase;
 
-            headerText.text = localization.Translate(TitleKey);
+            headerText.text = localization.Translate(
+                TitleGoldKey,
+                new Dictionary<string, object>
+                {
+                    ["title"] = localization.Translate(TitleKey),
+                    ["gold"] = inventory.Gold
+                });
             warehouseText.text = BuildInventoryText(
                 localization,
                 WarehouseKey,

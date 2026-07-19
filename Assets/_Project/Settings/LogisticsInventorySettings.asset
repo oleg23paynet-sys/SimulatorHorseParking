@@ -16,6 +16,7 @@ MonoBehaviour:
   warehouseCapacityUnits: 200
   cartId: cart-starter
   cartCapacityUnits: 12
+  startingGold: 30
   materialStoreId: material-store
   materialStoreNameKey: location.material_store
   cartTravelSpeedMetersPerSecond: 2.2
@@ -25,13 +26,16 @@ MonoBehaviour:
     capacityPerUnit: 1
     initialWarehouseQuantity: 0
     initialCartQuantity: 0
+    storePriceGold: 2
   - id: stone
     displayNameKey: resource.stone
     capacityPerUnit: 1
     initialWarehouseQuantity: 0
     initialCartQuantity: 0
+    storePriceGold: 3
   - id: iron
     displayNameKey: resource.iron
     capacityPerUnit: 2
     initialWarehouseQuantity: 0
     initialCartQuantity: 0
+    storePriceGold: 5

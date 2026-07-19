@@ -249,3 +249,51 @@ MonoBehaviour:
   - locale: en
     key: ui.cart.world_label
     text: CART
+  - locale: ru
+    key: ui.store.buy_button
+    text: "Купить {resource} — {price} зол."
+  - locale: ru
+    key: ui.store.status
+    text: "МАГАЗИН → ТЕЛЕГА | Золото: {gold} | Телега: {used}/{capacity}\n{feedback}"
+  - locale: ru
+    key: ui.store.feedback.ready
+    text: "Выберите материал. Одна кнопка покупает 1 единицу."
+  - locale: ru
+    key: ui.store.feedback.success
+    text: "Товар куплен и загружен в телегу."
+  - locale: ru
+    key: ui.store.feedback.no_gold
+    text: "Недостаточно золота."
+  - locale: ru
+    key: ui.store.feedback.no_capacity
+    text: "В телеге нет свободного места."
+  - locale: ru
+    key: ui.store.feedback.unknown
+    text: "Этот товар недоступен."
+  - locale: en
+    key: ui.store.buy_button
+    text: "Buy {resource} — {price} gold"
+  - locale: en
+    key: ui.store.status
+    text: "STORE → CART | Gold: {gold} | Cart: {used}/{capacity}\n{feedback}"
+  - locale: en
+    key: ui.store.feedback.ready
+    text: "Choose a material. Each button buys 1 unit."
+  - locale: en
+    key: ui.store.feedback.success
+    text: "Purchased and loaded into the cart."
+  - locale: en
+    key: ui.store.feedback.no_gold
+    text: "Not enough gold."
+  - locale: en
+    key: ui.store.feedback.no_capacity
+    text: "The cart has no free capacity."
+  - locale: en
+    key: ui.store.feedback.unknown
+    text: "This item is unavailable."
+  - locale: ru
+    key: ui.logistics.title_gold
+    text: "{title} | Золото: {gold}"
+  - locale: en
+    key: ui.logistics.title_gold
+    text: "{title} | Gold: {gold}"

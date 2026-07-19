@@ -29,8 +29,11 @@ namespace HorseParking.Presentation.Logistics
         [SerializeField] private string materialStoreId = "material-store";
 
         private CartJourneyUseCase journeyUseCase = null!;
+        private LogisticsInventoryUseCase inventoryUseCase = null!;
+        private readonly List<(Button button, Text label, StoreOfferSnapshot offer)> purchaseButtons = new();
         private CartStationKind currentStation;
         private bool isOpen;
+        private string feedbackKey = "ui.store.feedback.ready";
 
         public void Configure(
             GameCompositionRoot root,
@@ -75,10 +78,12 @@ namespace HorseParking.Presentation.Logistics
             }
 
             journeyUseCase = compositionRoot.CartJourneyUseCase;
+            inventoryUseCase = compositionRoot.LogisticsInventoryUseCase;
             warehouseTarget.InteractionRequested += Open;
             storeTarget.InteractionRequested += Open;
             actionButton.onClick.AddListener(ExecuteAction);
             closeButton.onClick.AddListener(Close);
+            CreatePurchaseButtons();
             panelRoot.SetActive(false);
         }
 
@@ -103,6 +108,7 @@ namespace HorseParking.Presentation.Logistics
         private void Open(CartStationKind station)
         {
             currentStation = station;
+            feedbackKey = "ui.store.feedback.ready";
             isOpen = true;
             panelRoot.SetActive(true);
             playerController.SetUiInputBlocked(true);
@@ -137,6 +143,37 @@ namespace HorseParking.Presentation.Logistics
             else Refresh();
         }
 
+        private void CreatePurchaseButtons()
+        {
+            var offers = inventoryUseCase.GetStoreOffers();
+            for (var index = 0; index < offers.Count; index++)
+            {
+                var offer = offers[index];
+                var button = Instantiate(actionButton, actionButton.transform.parent);
+                button.name = "Purchase_" + offer.ResourceId.Value;
+                button.onClick = new Button.ButtonClickedEvent();
+                button.onClick.AddListener(() => Purchase(offer));
+                var rect = button.GetComponent<RectTransform>();
+                rect.sizeDelta = new Vector2(220f, 58f);
+                rect.anchoredPosition = new Vector2((index - (offers.Count - 1) * 0.5f) * 235f, -82f);
+                var label = button.GetComponentInChildren<Text>(true);
+                purchaseButtons.Add((button, label, offer));
+            }
+        }
+
+        private void Purchase(StoreOfferSnapshot offer)
+        {
+            var result = inventoryUseCase.TryPurchaseForCart(offer.ResourceId, 1);
+            feedbackKey = result.Succeeded
+                ? "ui.store.feedback.success"
+                : result.FailureReason == PurchaseFailureReason.InsufficientGold
+                    ? "ui.store.feedback.no_gold"
+                    : result.FailureReason == PurchaseFailureReason.InsufficientCartCapacity
+                        ? "ui.store.feedback.no_capacity"
+                        : "ui.store.feedback.unknown";
+            Refresh();
+        }
+
         private void Refresh()
         {
             var localization = compositionRoot.LocalizationService;
@@ -158,8 +195,40 @@ namespace HorseParking.Presentation.Logistics
             var canReturn = currentStation == CartStationKind.MaterialStore
                 && snapshot.State == CartJourneyState.AtDestination;
             actionButton.gameObject.SetActive(canDispatch || canReturn);
-            instructionText.text = localization.Translate(new LocalizationKey(
-                GetInstructionKey(snapshot.State, canDispatch, canReturn)));
+            foreach (var purchase in purchaseButtons)
+            {
+                purchase.button.gameObject.SetActive(canReturn);
+                purchase.label.text = localization.Translate(
+                    new LocalizationKey("ui.store.buy_button"),
+                    new Dictionary<string, object>
+                    {
+                        ["resource"] = localization.Translate(purchase.offer.DisplayNameKey),
+                        ["price"] = purchase.offer.PriceGold
+                    });
+            }
+
+            if (canReturn)
+            {
+                var cart = inventoryUseCase.GetCartSnapshot();
+                instructionText.text = localization.Translate(
+                    new LocalizationKey("ui.store.status"),
+                    new Dictionary<string, object>
+                    {
+                        ["gold"] = inventoryUseCase.Gold,
+                        ["used"] = cart.UsedCapacityUnits,
+                        ["capacity"] = cart.CapacityUnits,
+                        ["feedback"] = localization.Translate(new LocalizationKey(feedbackKey))
+                    });
+                actionButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -150f);
+                closeButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -215f);
+            }
+            else
+            {
+                instructionText.text = localization.Translate(new LocalizationKey(
+                    GetInstructionKey(snapshot.State, canDispatch, canReturn)));
+                actionButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -92f);
+                closeButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -190f);
+            }
             if (canDispatch)
             {
                 actionButtonText.text = localization.Translate(new LocalizationKey("ui.cart_dispatch.send_to_store"));
