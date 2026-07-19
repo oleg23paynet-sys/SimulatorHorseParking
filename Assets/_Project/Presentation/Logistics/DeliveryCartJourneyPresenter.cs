@@ -36,7 +36,6 @@ namespace HorseParking.Presentation.Logistics
         [Min(0.1f)] [SerializeField] private float collisionProbeHeight = 0.8f;
 
         private CartJourneyUseCase journeyUseCase = null!;
-        private LogisticsInventoryUseCase inventoryUseCase = null!;
         private CartJourneyState observedState = (CartJourneyState)(-1);
         private Vector3[] routePositions = System.Array.Empty<Vector3>();
         private int routeIndex;
@@ -66,7 +65,6 @@ namespace HorseParking.Presentation.Logistics
             }
 
             journeyUseCase = compositionRoot.CartJourneyUseCase;
-            inventoryUseCase = compositionRoot.LogisticsInventoryUseCase;
             visualAdapter.BindInventory(compositionRoot);
             ConfigureSafeRouteAroundParkingFence();
             var initialState = journeyUseCase.GetSnapshot().State;
@@ -148,20 +146,7 @@ namespace HorseParking.Presentation.Logistics
             if (routeIndex < 0)
             {
                 visualAdapter.SetTraveling(false);
-                var arrival = journeyUseCase.NotifyArrivedAtWarehouse();
-                if (arrival.Succeeded) UnloadCartIntoWarehouse();
-            }
-        }
-
-        private void UnloadCartIntoWarehouse()
-        {
-            var cart = inventoryUseCase.GetCartSnapshot();
-            foreach (var item in cart.Items)
-            {
-                if (item.Quantity > 0)
-                {
-                    inventoryUseCase.TryUnloadCart(item.ResourceId, item.Quantity);
-                }
+                journeyUseCase.NotifyArrivedAtWarehouse();
             }
         }
 

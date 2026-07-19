@@ -58,6 +58,34 @@ namespace HorseParking.Application.Logistics
         public int PriceGold { get; }
     }
 
+    public enum CartUnloadFailureReason
+    {
+        None = 0,
+        UnknownResource = 1,
+        CartIsEmpty = 2,
+        WarehouseHasNoSpace = 3
+    }
+
+    /// <summary>Capacity-aware result for manual cart-to-warehouse transfers.</summary>
+    public readonly struct CartUnloadResult
+    {
+        public CartUnloadResult(
+            CartUnloadFailureReason failureReason,
+            int requestedQuantity,
+            int transferredQuantity)
+        {
+            FailureReason = failureReason;
+            RequestedQuantity = requestedQuantity;
+            TransferredQuantity = transferredQuantity;
+        }
+
+        public CartUnloadFailureReason FailureReason { get; }
+        public int RequestedQuantity { get; }
+        public int TransferredQuantity { get; }
+        public bool Succeeded => TransferredQuantity > 0;
+        public bool FullyTransferred => RequestedQuantity > 0 && RequestedQuantity == TransferredQuantity;
+    }
+
     /// <summary>Application boundary for warehouse and cart inventory operations.</summary>
     public sealed class LogisticsInventoryUseCase
     {
@@ -68,6 +96,7 @@ namespace HorseParking.Application.Logistics
         private int gold;
 
         public event Action? CartInventoryChanged;
+        public event Action? WarehouseInventoryChanged;
 
         public LogisticsInventoryUseCase(
             ResourceCatalog resourceCatalog,
@@ -126,8 +155,77 @@ namespace HorseParking.Application.Logistics
             }
 
             var result = cart.Cargo.TryTransferTo(warehouse.Inventory, resourceId, quantity);
-            if (result.Succeeded) CartInventoryChanged?.Invoke();
+            if (result.Succeeded) NotifyInventoryTransfer();
             return result;
+        }
+
+        /// <summary>
+        /// Transfers as much of one resource as the warehouse can accept. The operation
+        /// never creates negative quantities and reports a partial transfer explicitly.
+        /// </summary>
+        public CartUnloadResult TryUnloadCartUpToCapacity(ResourceId resourceId, int requestedQuantity)
+        {
+            if (requestedQuantity <= 0) throw new ArgumentOutOfRangeException(nameof(requestedQuantity));
+            if (!resourceCatalog.TryGet(resourceId, out var definition))
+            {
+                return new CartUnloadResult(CartUnloadFailureReason.UnknownResource, requestedQuantity, 0);
+            }
+
+            var availableInCart = cart.Cargo.GetQuantity(resourceId);
+            if (availableInCart <= 0)
+            {
+                return new CartUnloadResult(CartUnloadFailureReason.CartIsEmpty, requestedQuantity, 0);
+            }
+
+            var capacityForUnits = warehouse.Inventory.AvailableCapacityUnits / definition.CapacityPerUnit;
+            var transferable = Math.Min(requestedQuantity, Math.Min(availableInCart, capacityForUnits));
+            if (transferable <= 0)
+            {
+                return new CartUnloadResult(CartUnloadFailureReason.WarehouseHasNoSpace, requestedQuantity, 0);
+            }
+
+            var transfer = cart.Cargo.TryTransferTo(warehouse.Inventory, resourceId, transferable);
+            if (!transfer.Succeeded)
+            {
+                return new CartUnloadResult(CartUnloadFailureReason.WarehouseHasNoSpace, requestedQuantity, 0);
+            }
+
+            NotifyInventoryTransfer();
+            var reason = transferable < requestedQuantity
+                ? CartUnloadFailureReason.WarehouseHasNoSpace
+                : CartUnloadFailureReason.None;
+            return new CartUnloadResult(reason, requestedQuantity, transferable);
+        }
+
+        /// <summary>Atomically checks total capacity before unloading every resource.</summary>
+        public CartUnloadResult TryUnloadAllCartCargo()
+        {
+            var snapshot = GetCartSnapshot();
+            var totalQuantity = 0;
+            foreach (var item in snapshot.Items) totalQuantity = checked(totalQuantity + item.Quantity);
+            if (totalQuantity <= 0)
+            {
+                return new CartUnloadResult(CartUnloadFailureReason.CartIsEmpty, 0, 0);
+            }
+
+            if (snapshot.UsedCapacityUnits > warehouse.Inventory.AvailableCapacityUnits)
+            {
+                return new CartUnloadResult(CartUnloadFailureReason.WarehouseHasNoSpace, totalQuantity, 0);
+            }
+
+            foreach (var item in snapshot.Items)
+            {
+                if (item.Quantity <= 0) continue;
+                var transfer = cart.Cargo.TryTransferTo(warehouse.Inventory, item.ResourceId, item.Quantity);
+                if (!transfer.Succeeded)
+                {
+                    throw new InvalidOperationException(
+                        "Cart unload-all capacity was validated, but a resource transfer failed.");
+                }
+            }
+
+            NotifyInventoryTransfer();
+            return new CartUnloadResult(CartUnloadFailureReason.None, totalQuantity, totalQuantity);
         }
 
         public PurchaseResult TryPurchaseForCart(ResourceId resourceId, int quantity)
@@ -173,6 +271,12 @@ namespace HorseParking.Application.Logistics
                 inventory.CapacityUnits,
                 inventory.UsedCapacityUnits,
                 items.AsReadOnly());
+        }
+
+        private void NotifyInventoryTransfer()
+        {
+            CartInventoryChanged?.Invoke();
+            WarehouseInventoryChanged?.Invoke();
         }
     }
 }

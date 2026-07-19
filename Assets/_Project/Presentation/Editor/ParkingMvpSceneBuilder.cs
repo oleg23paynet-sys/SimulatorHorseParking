@@ -238,6 +238,36 @@ namespace HorseParking.Presentation.Editor
             Debug.Log("Delivery cart cargo and collision-safe route repaired in " + ScenePath);
         }
 
+        [MenuItem("Horse Parking/Install Stage 3.4 Manual Unloading")]
+        public static void InstallStage34ManualUnloading()
+        {
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            var compositionRoot = Object.FindAnyObjectByType<GameCompositionRoot>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing GameCompositionRoot.");
+            var playerController = Object.FindAnyObjectByType<FirstPersonPlayerController>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing the first-person player.");
+            var vehicle = GameObject.Find("DeliveryCartVehicle_01")
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing DeliveryCartVehicle_01.");
+            var canvasObject = GameObject.Find("CartDispatchUI")
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing CartDispatchUI.");
+            var settings = LoadOrCreateGameLocalizationSettings();
+            EnsureStage34Translations(settings);
+            compositionRoot.ConfigureLocalization(settings);
+            CreateStage34ManualUnloadUi(
+                canvasObject,
+                compositionRoot,
+                playerController,
+                vehicle,
+                LoadOrCreateLogisticsInventorySettings().MaterialStoreId);
+
+            EditorUtility.SetDirty(compositionRoot);
+            EditorUtility.SetDirty(settings);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Stage 3.4 manual cart unloading installed in " + ScenePath);
+        }
+
         private static void CreateLighting()
         {
             var lightObject = new GameObject("Directional Light");
@@ -1060,7 +1090,7 @@ namespace HorseParking.Presentation.Editor
 
             var runtimeRoot = new GameObject("Stage32_LogisticsJourney");
             var route = CreateDeliveryCartRoute(runtimeRoot.transform);
-            CreateDeliveryCartVehicle(
+            var vehicle = CreateDeliveryCartVehicle(
                 runtimeRoot.transform,
                 compositionRoot,
                 route,
@@ -1074,6 +1104,12 @@ namespace HorseParking.Presentation.Editor
                 playerCamera,
                 warehouseTarget,
                 storeTarget,
+                inventorySettings.MaterialStoreId);
+            CreateStage34ManualUnloadUi(
+                GameObject.Find("CartDispatchUI"),
+                compositionRoot,
+                playerController,
+                vehicle,
                 inventorySettings.MaterialStoreId);
         }
 
@@ -1639,6 +1675,88 @@ namespace HorseParking.Presentation.Editor
                 materialStoreId);
         }
 
+        private static void CreateStage34ManualUnloadUi(
+            GameObject canvasObject,
+            GameCompositionRoot compositionRoot,
+            FirstPersonPlayerController playerController,
+            GameObject vehicle,
+            string materialStoreId)
+        {
+            if (canvasObject == null) throw new System.ArgumentNullException(nameof(canvasObject));
+            EnsureStage34Translations(LoadOrCreateGameLocalizationSettings());
+
+            var oldPanel = canvasObject.transform.Find("CartUnloadPanel");
+            if (oldPanel != null) Object.DestroyImmediate(oldPanel.gameObject);
+            var oldPresenter = canvasObject.GetComponent<CartUnloadPanel>();
+            if (oldPresenter != null) Object.DestroyImmediate(oldPresenter);
+            var oldZone = vehicle.transform.Find("CartUnloadInteractionZone");
+            if (oldZone != null) Object.DestroyImmediate(oldZone.gameObject);
+
+            var interactionZone = new GameObject(
+                "CartUnloadInteractionZone",
+                typeof(BoxCollider),
+                typeof(CartUnloadInteractionTarget));
+            interactionZone.transform.SetParent(vehicle.transform, false);
+            interactionZone.transform.localPosition = new Vector3(0f, 1.05f, 0f);
+            interactionZone.transform.localRotation = Quaternion.identity;
+            var zoneCollider = interactionZone.GetComponent<BoxCollider>();
+            zoneCollider.center = Vector3.zero;
+            zoneCollider.size = new Vector3(3.6f, 2.1f, 3.8f);
+            zoneCollider.isTrigger = true;
+            var interactionTarget = interactionZone.GetComponent<CartUnloadInteractionTarget>();
+            interactionTarget.Configure(compositionRoot);
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var panelRoot = new GameObject(
+                "CartUnloadPanel",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            panelRoot.transform.SetParent(canvasObject.transform, false);
+            var panelRect = panelRoot.GetComponent<RectTransform>();
+            panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.sizeDelta = new Vector2(860f, 620f);
+            panelRoot.GetComponent<Image>().color = new Color(0.035f, 0.02f, 0.012f, 0.98f);
+
+            var title = CreateCentredText(
+                panelRoot.transform, "Title", font, 38,
+                new Vector2(0f, 260f), new Vector2(800f, 58f));
+            var capacity = CreateCentredText(
+                panelRoot.transform, "WarehouseCapacity", font, 25,
+                new Vector2(0f, 205f), new Vector2(800f, 58f));
+            var feedback = CreateCentredText(
+                panelRoot.transform, "Feedback", font, 23,
+                new Vector2(0f, 155f), new Vector2(800f, 48f));
+            feedback.color = new Color(1f, 0.78f, 0.28f, 1f);
+
+            var rowTemplate = CreateUiButton(
+                panelRoot.transform, "ResourceButtonTemplate", font,
+                new Vector2(0f, 70f), new Vector2(620f, 54f));
+            var unloadAll = CreateUiButton(
+                panelRoot.transform, "UnloadAllButton", font,
+                new Vector2(0f, -160f), new Vector2(620f, 62f));
+            var close = CreateUiButton(
+                panelRoot.transform, "CloseButton", font,
+                new Vector2(0f, -245f), new Vector2(280f, 56f));
+
+            var unloadPanel = canvasObject.AddComponent<CartUnloadPanel>();
+            unloadPanel.Configure(
+                compositionRoot,
+                playerController,
+                interactionTarget,
+                panelRoot,
+                title,
+                capacity,
+                feedback,
+                rowTemplate.button,
+                unloadAll.button,
+                unloadAll.label,
+                close.button,
+                close.label,
+                materialStoreId);
+            panelRoot.SetActive(true);
+        }
+
         private static (Button button, Text label) CreateUiButton(
             Transform parent,
             string name,
@@ -1755,6 +1873,44 @@ namespace HorseParking.Presentation.Editor
                 ("en", "ui.cart.guide.warehouse", "DELIVERY POINT: WAREHOUSE — the tall crane building on the right."),
                 ("en", "ui.cart.guide.store", "CART AT MATERIAL MARKET — the driver is behind its handles. Approach the stall and press E to send it to the warehouse."),
                 ("en", "ui.cart.world_label", "CART")
+            };
+            foreach (var entry in entries)
+            {
+                settings.EnsureTranslation(entry.Item1, entry.Item2, entry.Item3);
+            }
+            EditorUtility.SetDirty(settings);
+        }
+
+        private static void EnsureStage34Translations(GameLocalizationSettings settings)
+        {
+            var entries = new[]
+            {
+                ("ru", "interaction.cart.unload", "Разгрузить телегу"),
+                ("ru", "interaction.cart.cargo", "Телега у склада"),
+                ("ru", "interaction.cart.unload_opened", "Окно разгрузки открыто"),
+                ("ru", "ui.cart_unload.prompt", "Нажмите E, чтобы разгрузить телегу."),
+                ("ru", "ui.cart_unload.title", "Телега → Склад"),
+                ("ru", "ui.cart_unload.capacity", "Склад: занято {used} / {capacity}   •   свободно {free}"),
+                ("ru", "ui.cart_unload.resource_button", "Переместить: {resource} — {quantity}"),
+                ("ru", "ui.cart_unload.unload_all", "Разгрузить всё"),
+                ("ru", "ui.cart_unload.feedback.ready", "Выберите ресурс или разгрузите всё."),
+                ("ru", "ui.cart_unload.feedback.transferred", "Ресурс перемещён на склад."),
+                ("ru", "ui.cart_unload.feedback.transferred_all", "Телега полностью разгружена."),
+                ("ru", "ui.cart_unload.feedback.no_space", "Недостаточно места на складе."),
+                ("ru", "ui.cart_unload.feedback.empty", "В телеге нет этого ресурса."),
+                ("en", "interaction.cart.unload", "Unload cart"),
+                ("en", "interaction.cart.cargo", "Cart at warehouse"),
+                ("en", "interaction.cart.unload_opened", "Unloading window opened"),
+                ("en", "ui.cart_unload.prompt", "Press E to unload the cart."),
+                ("en", "ui.cart_unload.title", "Cart → Warehouse"),
+                ("en", "ui.cart_unload.capacity", "Warehouse: used {used} / {capacity}   •   free {free}"),
+                ("en", "ui.cart_unload.resource_button", "Transfer: {resource} — {quantity}"),
+                ("en", "ui.cart_unload.unload_all", "Unload all"),
+                ("en", "ui.cart_unload.feedback.ready", "Choose a resource or unload everything."),
+                ("en", "ui.cart_unload.feedback.transferred", "Resource transferred to warehouse."),
+                ("en", "ui.cart_unload.feedback.transferred_all", "Cart fully unloaded."),
+                ("en", "ui.cart_unload.feedback.no_space", "Not enough warehouse space."),
+                ("en", "ui.cart_unload.feedback.empty", "The cart has none of this resource.")
             };
             foreach (var entry in entries)
             {

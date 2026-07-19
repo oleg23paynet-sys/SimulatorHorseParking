@@ -34,7 +34,8 @@ namespace HorseParking.Presentation.Logistics
 
             var ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
             if (Physics.Raycast(ray, out var hit, interactionDistance)
-                && hit.collider.GetComponentInParent(typeof(IInteractionTarget)) is IInteractionTarget target)
+                && hit.collider.GetComponentInParent(typeof(IInteractionTarget)) is IInteractionTarget target
+                && target.Availability == InteractionAvailability.Available)
             {
                 SetPrompt(target);
                 return;
@@ -61,6 +62,12 @@ namespace HorseParking.Presentation.Logistics
         private void SetPrompt(IInteractionTarget target)
         {
             var localization = compositionRoot.LocalizationService;
+            if (target is CartUnloadInteractionTarget)
+            {
+                promptText.text = localization.Translate(new LocalizationKey("ui.cart_unload.prompt"));
+                return;
+            }
+
             promptText.text = localization.Translate(
                 new LocalizationKey("ui.interaction.prompt"),
                 new System.Collections.Generic.Dictionary<string, object>
