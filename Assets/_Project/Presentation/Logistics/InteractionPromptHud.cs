@@ -4,6 +4,7 @@ using HorseParking.Core.Interaction;
 using HorseParking.Core.Localization;
 using HorseParking.Core.Logistics;
 using HorseParking.Presentation.Composition;
+using HorseParking.Presentation.Construction;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -41,6 +42,14 @@ namespace HorseParking.Presentation.Logistics
                 return;
             }
 
+            if (ConstructionWorkerInteractionTarget.TryGetNearestAvailable(
+                    playerCamera.transform.position,
+                    out var nearbyWorker))
+            {
+                SetPrompt(nearbyWorker);
+                return;
+            }
+
             if (!compositionRoot.HasCartJourney)
             {
                 promptText.text = string.Empty;
@@ -65,6 +74,12 @@ namespace HorseParking.Presentation.Logistics
             if (target is CartUnloadInteractionTarget)
             {
                 promptText.text = localization.Translate(new LocalizationKey("ui.cart_unload.prompt"));
+                return;
+            }
+
+            if (target is ConstructionSignInteractionTarget)
+            {
+                promptText.text = localization.Translate(new LocalizationKey("ui.construction.prompt"));
                 return;
             }
 

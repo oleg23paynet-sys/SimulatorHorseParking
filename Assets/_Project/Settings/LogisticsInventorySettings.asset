@@ -17,6 +17,8 @@ MonoBehaviour:
   cartId: cart-starter
   cartCapacityUnits: 12
   startingGold: 30
+  demoModeEnabled: 1
+  demoStartingGold: 500
   materialStoreId: material-store
   materialStoreNameKey: location.material_store
   cartTravelSpeedMetersPerSecond: 2.2

@@ -147,6 +147,27 @@ namespace HorseParking.Application.Logistics
             return result;
         }
 
+        /// <summary>
+        /// Atomically consumes a complete recipe from the warehouse. Presentation
+        /// never receives direct access to the mutable domain inventory.
+        /// </summary>
+        public InventoryOperationResult TryConsumeWarehouseResources(
+            IReadOnlyDictionary<ResourceId, int> quantities)
+        {
+            if (quantities == null) throw new ArgumentNullException(nameof(quantities));
+            foreach (var resourceId in quantities.Keys)
+            {
+                if (!resourceCatalog.TryGet(resourceId, out _))
+                {
+                    return InventoryOperationResult.Failure(InventoryFailureReason.UnknownResource);
+                }
+            }
+
+            var result = warehouse.Inventory.TryRemoveBatch(quantities);
+            if (result.Succeeded) WarehouseInventoryChanged?.Invoke();
+            return result;
+        }
+
         public InventoryOperationResult TryUnloadCart(ResourceId resourceId, int quantity)
         {
             if (!resourceCatalog.TryGet(resourceId, out _))

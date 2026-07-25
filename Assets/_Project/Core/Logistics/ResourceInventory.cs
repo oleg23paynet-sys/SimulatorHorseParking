@@ -120,6 +120,33 @@ namespace HorseParking.Core.Logistics
             return InventoryOperationResult.Success();
         }
 
+        /// <summary>
+        /// Validates an entire resource cost before removing anything. Either every
+        /// requested quantity is removed or the inventory remains unchanged.
+        /// </summary>
+        public InventoryOperationResult TryRemoveBatch(IReadOnlyDictionary<ResourceId, int> quantities)
+        {
+            if (quantities == null) throw new ArgumentNullException(nameof(quantities));
+            if (quantities.Count == 0) throw new ArgumentException("At least one resource is required.", nameof(quantities));
+
+            foreach (var pair in quantities)
+            {
+                ValidateQuantity(pair.Value);
+                if (!entries.TryGetValue(pair.Key, out var entry) || entry.Quantity < pair.Value)
+                {
+                    return InventoryOperationResult.Failure(InventoryFailureReason.InsufficientQuantity);
+                }
+            }
+
+            foreach (var pair in quantities)
+            {
+                var entry = entries[pair.Key];
+                RemoveUnchecked(pair.Key, entry, pair.Value);
+            }
+
+            return InventoryOperationResult.Success();
+        }
+
         public InventoryOperationResult TryTransferTo(ResourceInventory target, ResourceId resourceId, int quantity)
         {
             if (target == null) throw new ArgumentNullException(nameof(target));

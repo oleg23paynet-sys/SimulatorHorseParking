@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using HorseParking.Application.Construction;
 using HorseParking.Application.Interaction;
 using HorseParking.Application.Logistics;
 using HorseParking.Application.Parking;
@@ -12,6 +13,7 @@ using HorseParking.Infrastructure.Localization;
 using HorseParking.Infrastructure.Randomness;
 using HorseParking.Infrastructure.Time;
 using HorseParking.Presentation.Logistics;
+using HorseParking.Presentation.Construction;
 using HorseParking.Presentation.Localization;
 using UnityEngine;
 
@@ -30,9 +32,11 @@ namespace HorseParking.Presentation.Composition
         private ParkingLifecycleUseCase parkingLifecycleUseCase = null!;
         private LogisticsInventoryUseCase? logisticsInventoryUseCase;
         private CartJourneyUseCase? cartJourneyUseCase;
+        private ConstructionRequirementsUseCase? constructionRequirementsUseCase;
 
         [SerializeField] private LogisticsInventorySettings? logisticsInventorySettings;
         [SerializeField] private GameLocalizationSettings? localizationSettings;
+        [SerializeField] private ConstructionRequirementsSettings? constructionRequirementsSettings;
 
         public ILocalizationService LocalizationService => localizationService;
 
@@ -56,6 +60,11 @@ namespace HorseParking.Presentation.Composition
         public CartJourneyUseCase CartJourneyUseCase => cartJourneyUseCase
             ?? throw new System.InvalidOperationException("Cart journey services are not configured in the Composition Root.");
 
+        public bool HasConstructionRequirements => constructionRequirementsUseCase != null;
+
+        public ConstructionRequirementsUseCase ConstructionRequirementsUseCase => constructionRequirementsUseCase
+            ?? throw new System.InvalidOperationException("Construction requirements are not configured in the Composition Root.");
+
         public void ConfigureLogisticsInventory(LogisticsInventorySettings settings)
         {
             logisticsInventorySettings = settings;
@@ -64,6 +73,11 @@ namespace HorseParking.Presentation.Composition
         public void ConfigureLocalization(GameLocalizationSettings settings)
         {
             localizationSettings = settings;
+        }
+
+        public void ConfigureConstructionRequirements(ConstructionRequirementsSettings settings)
+        {
+            constructionRequirementsSettings = settings;
         }
 
         private void Awake()
@@ -85,11 +99,15 @@ namespace HorseParking.Presentation.Composition
             if (logisticsInventorySettings != null)
             {
                 logisticsInventorySettings.CreateUseCases(out logisticsInventoryUseCase, out cartJourneyUseCase);
+                constructionRequirementsUseCase = constructionRequirementsSettings != null
+                    ? constructionRequirementsSettings.CreateUseCase(logisticsInventoryUseCase)
+                    : null;
             }
             else
             {
                 logisticsInventoryUseCase = null;
                 cartJourneyUseCase = null;
+                constructionRequirementsUseCase = null;
             }
         }
     }

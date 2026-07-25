@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using HorseParking.Presentation.Composition;
+using HorseParking.Presentation.Construction;
 using HorseParking.Presentation.Logistics;
 using HorseParking.Presentation.Localization;
 using HorseParking.Presentation.Player;
@@ -10,6 +11,7 @@ using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Rendering;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
@@ -21,6 +23,22 @@ namespace HorseParking.Presentation.Editor
         private const string ScenePath = "Assets/_Project/Scenes/ParkingMvp.unity";
         private const string LogisticsInventorySettingsPath = "Assets/_Project/Settings/LogisticsInventorySettings.asset";
         private const string GameLocalizationSettingsPath = "Assets/_Project/Settings/GameLocalizationSettings.asset";
+        private const string ConstructionRequirementsSettingsPath = "Assets/_Project/Settings/ConstructionRequirementsSettings.asset";
+        private const string ConstructionSignModelPath = "Assets/_Project/Content/Models/Props/ConstructionSign/SM_ConstructionSign.fbx";
+        private const string ConstructionSignTexturePath = "Assets/_Project/Content/Models/Props/ConstructionSign/Textures/T_ConstructionSign_BaseColor.jpeg";
+        private const string ConstructionSignMaterialPath = "Assets/_Project/Content/Models/Props/ConstructionSign/Materials/M_ConstructionSign.mat";
+        private const string ConstructionBuildingModelPath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/blue/building_archeryrange_blue.fbx";
+        private const string ConstructionWorkerModelPath = "Assets/Goblin/Prefab/skin1.prefab";
+        private const string ConstructionWorkerAvatarPath = "Assets/Goblin/Base Mesh/skin1.fbx";
+        private const string ConstructionWorkerIdleAnimationPath = "Assets/_Project/Content/Animations/Characters/ConstructionWorkers/Worker_Idle.fbx";
+        private const string ConstructionWorkerWalkAnimationPath = "Assets/_Project/Content/Animations/Characters/ConstructionWorkers/Worker_Walk.fbx";
+        private const string ConstructionWorkerHammeringAnimationPath = "Assets/_Project/Content/Animations/Characters/ConstructionWorkers/Worker_Tools_KayKit.fbx";
+        private const string ConstructionWorkerHitAnimationPath = "Assets/_Project/Content/Animations/Characters/ConstructionWorkers/Worker_Hit_KayKit.fbx";
+        private const string ConstructionHammerModelPath = "Assets/_Project/Content/Models/Props/ConstructionHammer/SM_ConstructionHammer.fbx";
+        private const string ConstructionHammerTexturePath = "Assets/_Project/Content/Models/Props/ConstructionHammer/Textures/T_ConstructionHammer_BaseColor.png";
+        private const string ConstructionHammerMaterialPath = "Assets/_Project/Content/Models/Props/ConstructionHammer/Materials/M_ConstructionHammer.mat";
+        private const string ConstructionGhostMaterialPath = "Assets/_Project/Presentation/Construction/Materials/M_ConstructionGhost.mat";
+        private const string ConstructionWorkerControllerPath = "Assets/_Project/Presentation/Animation/Controllers/AC_ConstructionWorker.controller";
         private const string DeliveryCartRuntimeFolder = "Assets/_Project/Content/Vehicles/DeliveryCart/Runtime/HandPushCart";
         private const string DeliveryCartModelPath = DeliveryCartRuntimeFolder + "/SM_HandPushCart.fbx";
         private const string DeliveryCartTextureFolder = DeliveryCartRuntimeFolder + "/textures";
@@ -96,6 +114,7 @@ namespace HorseParking.Presentation.Editor
             var compositionRoot = new GameObject("GameCompositionRoot").AddComponent<GameCompositionRoot>();
             compositionRoot.ConfigureLogisticsInventory(LoadOrCreateLogisticsInventorySettings());
             compositionRoot.ConfigureLocalization(LoadOrCreateGameLocalizationSettings());
+            compositionRoot.ConfigureConstructionRequirements(LoadOrCreateConstructionRequirementsSettings());
             var playerController = CreatePlayer(compositionRoot);
             CreateLogisticsInventoryHud(compositionRoot);
             CreateGround();
@@ -125,6 +144,11 @@ namespace HorseParking.Presentation.Editor
                 operationsBuildings.store,
                 operationsBuildings.warehouse,
                 LoadOrCreateLogisticsInventorySettings(),
+                LoadOrCreateGameLocalizationSettings());
+            CreateStage35ConstructionRequirements(
+                GameObject.Find("CartDispatchUI"),
+                compositionRoot,
+                playerController,
                 LoadOrCreateGameLocalizationSettings());
 
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -266,6 +290,92 @@ namespace HorseParking.Presentation.Editor
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
             Debug.Log("Stage 3.4 manual cart unloading installed in " + ScenePath);
+        }
+
+        [MenuItem("Horse Parking/Install Stage 3.5 Construction Requirements")]
+        public static void InstallStage35ConstructionRequirements()
+        {
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            var compositionRoot = Object.FindAnyObjectByType<GameCompositionRoot>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing GameCompositionRoot.");
+            var playerController = Object.FindAnyObjectByType<FirstPersonPlayerController>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing the first-person player.");
+            var canvasObject = GameObject.Find("CartDispatchUI")
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing CartDispatchUI.");
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(ConstructionSignModelPath) == null)
+            {
+                throw new System.InvalidOperationException(
+                    "Construction sign FBX is missing. Put the ready model at: " + ConstructionSignModelPath);
+            }
+
+            var constructionSettings = LoadOrCreateConstructionRequirementsSettings();
+            var localizationSettings = LoadOrCreateGameLocalizationSettings();
+            EnsureStage35Translations(localizationSettings);
+            compositionRoot.ConfigureLogisticsInventory(LoadOrCreateLogisticsInventorySettings());
+            compositionRoot.ConfigureLocalization(localizationSettings);
+            compositionRoot.ConfigureConstructionRequirements(constructionSettings);
+            CreateStage35ConstructionRequirements(
+                canvasObject,
+                compositionRoot,
+                playerController,
+                localizationSettings);
+
+            EditorUtility.SetDirty(compositionRoot);
+            EditorUtility.SetDirty(constructionSettings);
+            EditorUtility.SetDirty(localizationSettings);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Stage 3.5 construction requirements installed in " + ScenePath);
+        }
+
+        [MenuItem("Horse Parking/Install Stage 3.6 Construction Process")]
+        public static void InstallStage36ConstructionProcess()
+        {
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            var compositionRoot = Object.FindAnyObjectByType<GameCompositionRoot>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing GameCompositionRoot.");
+            var playerController = Object.FindAnyObjectByType<FirstPersonPlayerController>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing the first-person player.");
+            var canvasObject = GameObject.Find("CartDispatchUI")
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing CartDispatchUI.");
+
+            foreach (var requiredAsset in new[]
+                     {
+                         ConstructionSignModelPath,
+                         ConstructionBuildingModelPath,
+                         ConstructionWorkerModelPath,
+                         ConstructionHammerModelPath
+                     })
+            {
+                if (AssetDatabase.LoadAssetAtPath<GameObject>(requiredAsset) == null)
+                {
+                    throw new System.InvalidOperationException("Required ready-made FBX is missing: " + requiredAsset);
+                }
+            }
+
+            var constructionSettings = LoadOrCreateConstructionRequirementsSettings();
+            var localizationSettings = LoadOrCreateGameLocalizationSettings();
+            EnsureStage35Translations(localizationSettings);
+            EnsureStage36Translations(localizationSettings);
+            compositionRoot.ConfigureLogisticsInventory(LoadOrCreateLogisticsInventorySettings());
+            compositionRoot.ConfigureLocalization(localizationSettings);
+            compositionRoot.ConfigureConstructionRequirements(constructionSettings);
+
+            CreateStage35ConstructionRequirements(
+                canvasObject,
+                compositionRoot,
+                playerController,
+                localizationSettings);
+            CreateStage36ConstructionProcess(canvasObject, compositionRoot);
+
+            EditorUtility.SetDirty(compositionRoot);
+            EditorUtility.SetDirty(constructionSettings);
+            EditorUtility.SetDirty(localizationSettings);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Stage 3.6 construction process installed in " + ScenePath);
         }
 
         private static void CreateLighting()
@@ -1754,7 +1864,522 @@ namespace HorseParking.Presentation.Editor
                 close.button,
                 close.label,
                 materialStoreId);
-            panelRoot.SetActive(true);
+            panelRoot.SetActive(false);
+        }
+
+        private static void CreateStage35ConstructionRequirements(
+            GameObject canvasObject,
+            GameCompositionRoot compositionRoot,
+            FirstPersonPlayerController playerController,
+            GameLocalizationSettings localizationSettings)
+        {
+            if (canvasObject == null) throw new System.ArgumentNullException(nameof(canvasObject));
+            EnsureStage35Translations(localizationSettings);
+
+            var oldSite = GameObject.Find("Stage35_ConstructionRequirements");
+            if (oldSite != null) Object.DestroyImmediate(oldSite);
+            var oldPanel = canvasObject.transform.Find("ConstructionRequirementsPanel");
+            if (oldPanel != null) Object.DestroyImmediate(oldPanel.gameObject);
+            var oldPresenter = canvasObject.GetComponent<ConstructionRequirementsPanel>();
+            if (oldPresenter != null) Object.DestroyImmediate(oldPresenter);
+
+            var signAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ConstructionSignModelPath)
+                ?? throw new System.InvalidOperationException(
+                    "Construction sign FBX is missing. Put the ready model at: " + ConstructionSignModelPath);
+
+            var siteRoot = new GameObject(
+                "Stage35_ConstructionRequirements",
+                typeof(ConstructionSignInteractionTarget));
+            var sitePosition = new Vector3(4.8f, 0f, 5.5f);
+            var terrain = Object.FindAnyObjectByType<Terrain>();
+            sitePosition.y = terrain != null
+                ? terrain.SampleHeight(sitePosition) + terrain.transform.position.y
+                : groundSurfaceY;
+            siteRoot.transform.position = sitePosition;
+            siteRoot.transform.rotation = Quaternion.Euler(0f, 205f, 0f);
+
+            var sign = (GameObject)PrefabUtility.InstantiatePrefab(signAsset);
+            sign.name = "ConstructionSign_ParkingSlot_02";
+            sign.transform.SetParent(siteRoot.transform, true);
+            sign.transform.position = sitePosition;
+            sign.transform.rotation = siteRoot.transform.rotation;
+            ScaleToHeight(sign, 1.75f);
+            PlaceBaseAtHeight(sign, sitePosition.y);
+            var signMaterial = LoadOrCreateConstructionSignMaterial();
+            foreach (var renderer in sign.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.sharedMaterial = signMaterial;
+            }
+            AddMeshColliders(sign);
+
+            var interactionZone = new GameObject("ConstructionSignInteractionZone", typeof(BoxCollider));
+            interactionZone.transform.SetParent(siteRoot.transform, false);
+            interactionZone.transform.localPosition = new Vector3(0f, 1f, 0f);
+            var zoneCollider = interactionZone.GetComponent<BoxCollider>();
+            zoneCollider.center = Vector3.zero;
+            zoneCollider.size = new Vector3(2.4f, 2.2f, 1.8f);
+            zoneCollider.isTrigger = true;
+
+            var interactionTarget = siteRoot.GetComponent<ConstructionSignInteractionTarget>();
+            interactionTarget.Configure(compositionRoot);
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var panelRoot = new GameObject(
+                "ConstructionRequirementsPanel",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            panelRoot.transform.SetParent(canvasObject.transform, false);
+            var panelRect = panelRoot.GetComponent<RectTransform>();
+            panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.sizeDelta = new Vector2(860f, 620f);
+            panelRoot.GetComponent<Image>().color = new Color(0.035f, 0.02f, 0.012f, 0.98f);
+
+            var title = CreateCentredText(
+                panelRoot.transform, "Title", font, 38,
+                new Vector2(0f, 262f), new Vector2(800f, 56f));
+            var project = CreateCentredText(
+                panelRoot.transform, "Project", font, 29,
+                new Vector2(0f, 215f), new Vector2(800f, 44f));
+            var projectOption = CreateUiButton(
+                panelRoot.transform, "ProjectOption_ParkingSlot", font,
+                new Vector2(0f, 158f), new Vector2(700f, 54f));
+            var requirementsHeading = CreateCentredText(
+                panelRoot.transform, "RequirementsHeading", font, 25,
+                new Vector2(0f, 103f), new Vector2(760f, 42f));
+            var feedback = CreateCentredText(
+                panelRoot.transform, "Feedback", font, 23,
+                new Vector2(0f, -120f), new Vector2(800f, 62f));
+            var rowTemplate = CreateCentredText(
+                panelRoot.transform, "RequirementRowTemplate", font, 25,
+                new Vector2(0f, 25f), new Vector2(740f, 48f));
+            var start = CreateUiButton(
+                panelRoot.transform, "StartConstructionButton", font,
+                new Vector2(0f, -195f), new Vector2(620f, 62f));
+            var close = CreateUiButton(
+                panelRoot.transform, "CloseButton", font,
+                new Vector2(0f, -270f), new Vector2(280f, 54f));
+
+            var presenter = canvasObject.AddComponent<ConstructionRequirementsPanel>();
+            presenter.Configure(
+                compositionRoot,
+                playerController,
+                interactionTarget,
+                panelRoot,
+                title,
+                project,
+                projectOption.button,
+                projectOption.label,
+                requirementsHeading,
+                feedback,
+                rowTemplate,
+                start.button,
+                start.label,
+                close.button,
+                close.label);
+            panelRoot.SetActive(false);
+        }
+
+        private static void CreateStage36ConstructionProcess(
+            GameObject canvasObject,
+            GameCompositionRoot compositionRoot)
+        {
+            var oldRoot = GameObject.Find("Stage36_ConstructionProcess");
+            if (oldRoot != null) Object.DestroyImmediate(oldRoot);
+            var oldHud = canvasObject.transform.Find("ConstructionProgressHud");
+            if (oldHud != null) Object.DestroyImmediate(oldHud.gameObject);
+
+            var stage35Root = GameObject.Find("Stage35_ConstructionRequirements")
+                ?? throw new System.InvalidOperationException("Stage 3.5 construction site is missing.");
+            var constructionSign = stage35Root.transform.Find("ConstructionSign_ParkingSlot_02")?.gameObject
+                ?? throw new System.InvalidOperationException("Construction sign visual is missing.");
+            var buildingAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ConstructionBuildingModelPath)
+                ?? throw new System.InvalidOperationException("Construction building FBX is missing.");
+
+            var constructionRoot = new GameObject(
+                "Stage36_ConstructionProcess",
+                typeof(ConstructionProcessPresenter));
+            var buildingPosition = new Vector3(4.8f, 0f, 8.4f);
+            var terrain = Object.FindAnyObjectByType<Terrain>();
+            buildingPosition.y = terrain != null
+                ? terrain.SampleHeight(buildingPosition) + terrain.transform.position.y
+                : groundSurfaceY;
+            constructionRoot.transform.position = buildingPosition;
+            constructionRoot.transform.rotation = Quaternion.Euler(0f, 205f, 0f);
+
+            var ghostPreview = (GameObject)PrefabUtility.InstantiatePrefab(buildingAsset);
+            ghostPreview.name = "ParkingBuilding_GhostPreview";
+            ghostPreview.transform.SetParent(constructionRoot.transform, true);
+            ghostPreview.transform.position = buildingPosition;
+            ghostPreview.transform.rotation = constructionRoot.transform.rotation;
+            ScaleToHeight(ghostPreview, 3.2f);
+            PlaceBaseAtHeight(ghostPreview, buildingPosition.y);
+            ghostPreview.transform.localScale *= 1.015f;
+            var ghostMaterial = LoadOrCreateConstructionGhostMaterial();
+            foreach (var renderer in ghostPreview.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.sharedMaterial = ghostMaterial;
+            }
+
+            var progressAnchor = new GameObject("ParkingBuilding_ProgressFill").transform;
+            progressAnchor.SetParent(constructionRoot.transform, true);
+            progressAnchor.position = buildingPosition;
+            progressAnchor.rotation = constructionRoot.transform.rotation;
+            var progressModel = (GameObject)PrefabUtility.InstantiatePrefab(buildingAsset);
+            progressModel.name = "ParkingBuilding_ProgressModel";
+            progressModel.transform.position = buildingPosition;
+            progressModel.transform.rotation = constructionRoot.transform.rotation;
+            ScaleToHeight(progressModel, 3.2f);
+            PlaceBaseAtHeight(progressModel, buildingPosition.y);
+            progressModel.transform.SetParent(progressAnchor, true);
+
+            var completedVisual = (GameObject)PrefabUtility.InstantiatePrefab(buildingAsset);
+            completedVisual.name = "ParkingBuilding_Completed";
+            completedVisual.transform.SetParent(constructionRoot.transform, true);
+            completedVisual.transform.position = buildingPosition;
+            completedVisual.transform.rotation = constructionRoot.transform.rotation;
+            ScaleToHeight(completedVisual, 3.2f);
+            PlaceBaseAtHeight(completedVisual, buildingPosition.y);
+            AddMeshColliders(completedVisual);
+
+            var workersRoot = new GameObject("ConstructionWorkers");
+            workersRoot.transform.SetParent(constructionRoot.transform, false);
+            var directionToSign = stage35Root.transform.position - buildingPosition;
+            directionToSign.y = 0f;
+            directionToSign = directionToSign.sqrMagnitude > 0.001f
+                ? directionToSign.normalized
+                : Vector3.back;
+            var workerSide = Vector3.Cross(Vector3.up, directionToSign).normalized;
+            var workerOneBuildPosition = buildingPosition + directionToSign * 1.9f - workerSide * 1.25f;
+            var workerTwoBuildPosition = buildingPosition + directionToSign * 1.9f + workerSide * 1.25f;
+            var workerOneSpawnPosition = buildingPosition + directionToSign * 4.6f - workerSide * 1.65f;
+            var workerTwoSpawnPosition = buildingPosition + directionToSign * 4.9f + workerSide * 1.65f;
+            var workers = new[]
+            {
+                CreateConstructionWorker(
+                    compositionRoot,
+                    workersRoot.transform,
+                    "ConstructionWorker_01",
+                    workerOneSpawnPosition,
+                    workerOneBuildPosition,
+                    Quaternion.LookRotation(buildingPosition - workerOneBuildPosition, Vector3.up)),
+                CreateConstructionWorker(
+                    compositionRoot,
+                    workersRoot.transform,
+                    "ConstructionWorker_02",
+                    workerTwoSpawnPosition,
+                    workerTwoBuildPosition,
+                    Quaternion.LookRotation(buildingPosition - workerTwoBuildPosition, Vector3.up))
+            };
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var progressHudRoot = new GameObject(
+                "ConstructionProgressHud",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            progressHudRoot.transform.SetParent(canvasObject.transform, false);
+            var hudRect = progressHudRoot.GetComponent<RectTransform>();
+            hudRect.anchorMin = hudRect.anchorMax = hudRect.pivot = new Vector2(0.5f, 1f);
+            hudRect.anchoredPosition = new Vector2(0f, -22f);
+            hudRect.sizeDelta = new Vector2(560f, 76f);
+            progressHudRoot.GetComponent<Image>().color = new Color(0.035f, 0.02f, 0.012f, 0.92f);
+
+            var fillBackground = new GameObject(
+                "ProgressBackground",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            fillBackground.transform.SetParent(progressHudRoot.transform, false);
+            var backgroundRect = fillBackground.GetComponent<RectTransform>();
+            backgroundRect.anchorMin = backgroundRect.anchorMax = backgroundRect.pivot = new Vector2(0.5f, 0.5f);
+            backgroundRect.anchoredPosition = new Vector2(0f, -19f);
+            backgroundRect.sizeDelta = new Vector2(510f, 18f);
+            fillBackground.GetComponent<Image>().color = new Color(0.15f, 0.1f, 0.06f, 1f);
+
+            var fillObject = new GameObject(
+                "ProgressFill",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            fillObject.transform.SetParent(fillBackground.transform, false);
+            var fillRect = fillObject.GetComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
+            var fillImage = fillObject.GetComponent<Image>();
+            fillImage.color = new Color(0.9f, 0.56f, 0.12f, 1f);
+            fillImage.type = Image.Type.Filled;
+            fillImage.fillMethod = Image.FillMethod.Horizontal;
+            fillImage.fillOrigin = 0;
+            fillImage.fillAmount = 0f;
+
+            var progressText = CreateCentredText(
+                progressHudRoot.transform,
+                "ProgressText",
+                font,
+                24,
+                new Vector2(0f, 14f),
+                new Vector2(520f, 38f));
+
+            var presenter = constructionRoot.GetComponent<ConstructionProcessPresenter>();
+            presenter.Configure(
+                compositionRoot,
+                ghostPreview,
+                progressAnchor,
+                completedVisual,
+                workersRoot,
+                workers,
+                progressHudRoot,
+                fillImage,
+                progressText,
+                constructionSign);
+            canvasObject.GetComponent<ConstructionRequirementsPanel>()?.BindPreviewPresenter(presenter);
+
+            ghostPreview.SetActive(false);
+            progressAnchor.gameObject.SetActive(false);
+            completedVisual.SetActive(false);
+            workersRoot.SetActive(false);
+            progressHudRoot.SetActive(false);
+        }
+
+        private static Transform CreateConstructionWorker(
+            GameCompositionRoot compositionRoot,
+            Transform parent,
+            string name,
+            Vector3 spawnWorldPosition,
+            Vector3 buildWorldPosition,
+            Quaternion buildWorldRotation)
+        {
+            var workerAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ConstructionWorkerModelPath)
+                ?? throw new System.InvalidOperationException("Construction worker FBX is missing.");
+            var hammerAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ConstructionHammerModelPath)
+                ?? throw new System.InvalidOperationException("Construction hammer FBX is missing.");
+
+            var workerImporter = AssetImporter.GetAtPath(ConstructionWorkerAvatarPath) as ModelImporter
+                ?? throw new System.InvalidOperationException("Construction worker model importer is missing.");
+            if (workerImporter.animationType != ModelImporterAnimationType.Human)
+            {
+                workerImporter.animationType = ModelImporterAnimationType.Human;
+                workerImporter.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+                workerImporter.SaveAndReimport();
+            }
+
+            var worker = (GameObject)PrefabUtility.InstantiatePrefab(workerAsset);
+            worker.name = name;
+            worker.transform.position = spawnWorldPosition;
+            worker.transform.rotation = Quaternion.LookRotation(
+                buildWorldPosition - spawnWorldPosition,
+                Vector3.up);
+            ScaleToHeight(worker, 1.15f);
+            PlaceBaseAtHeight(worker, spawnWorldPosition.y);
+            worker.transform.SetParent(parent, true);
+
+            var hammer = (GameObject)PrefabUtility.InstantiatePrefab(hammerAsset);
+            hammer.name = name + "_Hammer";
+            hammer.transform.position = worker.transform.position + worker.transform.up * 0.72f;
+            ScaleToHeight(hammer, 0.42f);
+            var hammerMaterial = LoadOrCreateConstructionHammerMaterial();
+            foreach (var renderer in hammer.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.sharedMaterial = hammerMaterial;
+            }
+            var animator = worker.GetComponentInChildren<Animator>() ?? worker.AddComponent<Animator>();
+            var workerAvatar = AssetDatabase.LoadAllAssetsAtPath(ConstructionWorkerAvatarPath)
+                .OfType<Avatar>()
+                .FirstOrDefault(avatar => avatar.isValid && avatar.isHuman)
+                ?? throw new System.InvalidOperationException("Construction worker Humanoid avatar is invalid.");
+            animator.avatar = workerAvatar;
+            animator.runtimeAnimatorController = GetOrCreateConstructionWorkerController();
+            animator.applyRootMotion = false;
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            var motion = worker.AddComponent<ConstructionWorkerMotionPresenter>();
+            motion.Configure(animator, buildWorldPosition, buildWorldRotation);
+            var hitCollider = worker.AddComponent<CapsuleCollider>();
+            hitCollider.center = new Vector3(0f, 0.58f, 0f);
+            hitCollider.radius = 0.32f;
+            hitCollider.height = 1.16f;
+            hitCollider.direction = 1;
+            var interactionRadius = worker.AddComponent<SphereCollider>();
+            interactionRadius.center = new Vector3(0f, 0.58f, 0f);
+            interactionRadius.radius = 2.5f;
+            interactionRadius.isTrigger = true;
+            var hitEffectObject = new GameObject(name + "_HitEffect", typeof(ParticleSystem));
+            hitEffectObject.transform.SetParent(worker.transform, false);
+            hitEffectObject.transform.localPosition = new Vector3(0f, 0.72f, 0f);
+            var hitEffect = hitEffectObject.GetComponent<ParticleSystem>();
+            var hitMain = hitEffect.main;
+            hitMain.loop = false;
+            hitMain.playOnAwake = false;
+            hitMain.duration = 0.25f;
+            hitMain.startLifetime = 0.22f;
+            hitMain.startSpeed = 1.2f;
+            hitMain.startSize = 0.08f;
+            hitMain.startColor = new Color(1f, 0.72f, 0.18f, 1f);
+            hitMain.maxParticles = 12;
+            var hitEmission = hitEffect.emission;
+            hitEmission.enabled = false;
+            hitEffect.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            worker.AddComponent<ConstructionWorkerInteractionTarget>().Configure(
+                compositionRoot,
+                animator,
+                motion,
+                hitEffect);
+            var hand = animator.isHuman
+                ? animator.GetBoneTransform(HumanBodyBones.RightHand)
+                : null;
+            hammer.transform.SetParent(hand != null ? hand : worker.transform, true);
+            if (hand != null)
+            {
+                hammer.transform.localPosition = new Vector3(0.03f, 0.02f, 0.02f);
+                hammer.transform.localRotation = Quaternion.Euler(10f, 5f, 85f);
+            }
+
+            return worker.transform;
+        }
+
+        private static AnimatorController GetOrCreateConstructionWorkerController()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<AnimatorController>(ConstructionWorkerControllerPath);
+            AnimatorController controller;
+            if (existing != null)
+            {
+                controller = existing;
+            }
+            else
+            {
+                EnsureFolder("Assets/_Project/Presentation/Animation");
+                EnsureFolder("Assets/_Project/Presentation/Animation/Controllers");
+                controller = AnimatorController.CreateAnimatorControllerAtPath(ConstructionWorkerControllerPath);
+            }
+
+            var stateMachine = controller.layers[0].stateMachine;
+            foreach (var childState in stateMachine.states)
+            {
+                stateMachine.RemoveState(childState.state);
+            }
+
+            foreach (var parameter in controller.parameters)
+            {
+                controller.RemoveParameter(parameter);
+            }
+
+            controller.AddParameter("isWalking", AnimatorControllerParameterType.Bool);
+            controller.AddParameter("isBuilding", AnimatorControllerParameterType.Bool);
+            controller.AddParameter("wasHit", AnimatorControllerParameterType.Trigger);
+
+            var idleState = stateMachine.AddState("WorkerIdle");
+            var walkState = stateMachine.AddState("WorkerWalk");
+            var hammeringState = stateMachine.AddState("WorkerHammering");
+            var hitState = stateMachine.AddState("WorkerHit");
+            idleState.motion = GetConstructionWorkerAnimationClip(
+                ConstructionWorkerIdleAnimationPath,
+                preferredName: null,
+                loopTime: true);
+            walkState.motion = GetConstructionWorkerAnimationClip(
+                ConstructionWorkerWalkAnimationPath,
+                preferredName: null,
+                loopTime: true);
+            hammeringState.motion = GetConstructionWorkerAnimationClip(
+                ConstructionWorkerHammeringAnimationPath,
+                preferredName: "Hammering",
+                loopTime: true);
+            hitState.motion = GetConstructionWorkerAnimationClip(
+                ConstructionWorkerHitAnimationPath,
+                preferredName: "Melee_Block_Hit",
+                loopTime: false);
+
+            AddWorkerTransition(idleState, walkState, "isWalking", expectedValue: true);
+            AddWorkerTransition(idleState, hammeringState, "isBuilding", expectedValue: true);
+            AddWorkerTransition(walkState, idleState, "isWalking", expectedValue: false);
+            AddWorkerTransition(walkState, hammeringState, "isBuilding", expectedValue: true);
+            AddWorkerTransition(hammeringState, idleState, "isBuilding", expectedValue: false);
+            var hitTransition = stateMachine.AddAnyStateTransition(hitState);
+            hitTransition.hasExitTime = false;
+            hitTransition.hasFixedDuration = true;
+            hitTransition.duration = 0.04f;
+            hitTransition.canTransitionToSelf = false;
+            hitTransition.AddCondition(AnimatorConditionMode.If, 0f, "wasHit");
+            AddWorkerExitTransition(hitState, hammeringState, "isBuilding", expectedValue: true);
+            AddWorkerExitTransition(hitState, idleState, "isBuilding", expectedValue: false);
+
+            stateMachine.defaultState = idleState;
+            AssetDatabase.SaveAssets();
+            return controller;
+        }
+
+        private static void AddWorkerTransition(
+            AnimatorState source,
+            AnimatorState destination,
+            string parameter,
+            bool expectedValue)
+        {
+            var transition = source.AddTransition(destination);
+            transition.hasExitTime = false;
+            transition.hasFixedDuration = true;
+            transition.duration = 0.08f;
+            transition.AddCondition(
+                expectedValue ? AnimatorConditionMode.If : AnimatorConditionMode.IfNot,
+                0f,
+                parameter);
+        }
+
+        private static void AddWorkerExitTransition(
+            AnimatorState source,
+            AnimatorState destination,
+            string parameter,
+            bool expectedValue)
+        {
+            var transition = source.AddTransition(destination);
+            transition.hasExitTime = true;
+            transition.exitTime = 0.92f;
+            transition.hasFixedDuration = true;
+            transition.duration = 0.08f;
+            transition.AddCondition(
+                expectedValue ? AnimatorConditionMode.If : AnimatorConditionMode.IfNot,
+                0f,
+                parameter);
+        }
+
+        private static AnimationClip GetConstructionWorkerAnimationClip(
+            string path,
+            string preferredName,
+            bool loopTime)
+        {
+            var importer = AssetImporter.GetAtPath(path) as ModelImporter
+                ?? throw new System.InvalidOperationException(
+                    "Construction worker animation is missing: " + path);
+            if (importer.animationType != ModelImporterAnimationType.Human
+                || importer.avatarSetup != ModelImporterAvatarSetup.CreateFromThisModel)
+            {
+                importer.animationType = ModelImporterAnimationType.Human;
+                importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+            }
+
+            var clips = importer.defaultClipAnimations;
+            foreach (var clip in clips)
+            {
+                var isSelectedClip = string.IsNullOrEmpty(preferredName)
+                    || clip.name.IndexOf(preferredName, System.StringComparison.OrdinalIgnoreCase) >= 0;
+                clip.loopTime = isSelectedClip && loopTime;
+                clip.loopPose = isSelectedClip && loopTime;
+                clip.keepOriginalPositionXZ = true;
+                clip.keepOriginalPositionY = true;
+            }
+
+            importer.clipAnimations = clips;
+            importer.SaveAndReimport();
+            var importedClips = AssetDatabase.LoadAllAssetsAtPath(path)
+                .OfType<AnimationClip>()
+                .Where(candidate => !candidate.name.StartsWith("__preview__"))
+                .ToArray();
+            var selectedClip = string.IsNullOrEmpty(preferredName)
+                ? importedClips.FirstOrDefault()
+                : importedClips.FirstOrDefault(candidate =>
+                    candidate.name.IndexOf(preferredName, System.StringComparison.OrdinalIgnoreCase) >= 0);
+            return selectedClip
+                ?? throw new System.InvalidOperationException(
+                    "No Humanoid animation clip '" + preferredName + "' found in " + path);
         }
 
         private static (Button button, Text label) CreateUiButton(
@@ -1911,6 +2536,70 @@ namespace HorseParking.Presentation.Editor
                 ("en", "ui.cart_unload.feedback.transferred_all", "Cart fully unloaded."),
                 ("en", "ui.cart_unload.feedback.no_space", "Not enough warehouse space."),
                 ("en", "ui.cart_unload.feedback.empty", "The cart has none of this resource.")
+            };
+            foreach (var entry in entries)
+            {
+                settings.EnsureTranslation(entry.Item1, entry.Item2, entry.Item3);
+            }
+            EditorUtility.SetDirty(settings);
+        }
+
+        private static void EnsureStage35Translations(GameLocalizationSettings settings)
+        {
+            var entries = new[]
+            {
+                ("ru", "interaction.construction.open", "Открыть строительство"),
+                ("ru", "interaction.construction.opened", "Окно строительства открыто"),
+                ("ru", "construction.parking_slot", "Новое парковочное место"),
+                ("ru", "ui.construction.prompt", "Нажмите E, чтобы открыть строительство."),
+                ("ru", "ui.construction.title", "Строительство"),
+                ("ru", "ui.construction.project", "Объект: {project}"),
+                ("ru", "ui.construction.requirements", "Требования к материалам"),
+                ("ru", "ui.construction.requirement", "{resource}: на складе {available} / нужно {required}   •   не хватает {missing}"),
+                ("ru", "ui.construction.status.ready", "Все материалы есть. Строительство можно начинать."),
+                ("ru", "ui.construction.status.missing", "Недостаточно материалов на складе."),
+                ("ru", "ui.construction.start", "Начать строительство"),
+                ("ru", "ui.construction.stage35_only", "Требования выполнены. Расход ресурсов и стройка появятся на этапе 3.6."),
+                ("en", "interaction.construction.open", "Open construction"),
+                ("en", "interaction.construction.opened", "Construction window opened"),
+                ("en", "construction.parking_slot", "New parking space"),
+                ("en", "ui.construction.prompt", "Press E to open construction."),
+                ("en", "ui.construction.title", "Construction"),
+                ("en", "ui.construction.project", "Project: {project}"),
+                ("en", "ui.construction.requirements", "Material requirements"),
+                ("en", "ui.construction.requirement", "{resource}: warehouse {available} / required {required}   •   missing {missing}"),
+                ("en", "ui.construction.status.ready", "All materials are available. Construction can begin."),
+                ("en", "ui.construction.status.missing", "Not enough materials in the warehouse."),
+                ("en", "ui.construction.start", "Start construction"),
+                ("en", "ui.construction.stage35_only", "Requirements are met. Resource spending and construction arrive in Stage 3.6.")
+            };
+            foreach (var entry in entries)
+            {
+                settings.EnsureTranslation(entry.Item1, entry.Item2, entry.Item3);
+            }
+            EditorUtility.SetDirty(settings);
+        }
+
+        private static void EnsureStage36Translations(GameLocalizationSettings settings)
+        {
+            var entries = new[]
+            {
+                ("ru", "ui.construction.choose_project", "Выберите здание"),
+                ("ru", "ui.construction.option.available", "{project} — доступно"),
+                ("ru", "ui.construction.option.locked", "{project} — не хватает материалов"),
+                ("ru", "ui.construction.status.choose", "Материалы собраны. Выберите здание, чтобы увидеть его призрак."),
+                ("ru", "ui.construction.status.started", "Материалы списаны. Строительство началось."),
+                ("ru", "ui.construction.status.in_progress", "Этот объект уже строится."),
+                ("ru", "ui.construction.status.completed", "Строительство завершено."),
+                ("ru", "ui.construction.progress", "Строительство: {progress}%"),
+                ("en", "ui.construction.choose_project", "Choose a building"),
+                ("en", "ui.construction.option.available", "{project} — available"),
+                ("en", "ui.construction.option.locked", "{project} — missing materials"),
+                ("en", "ui.construction.status.choose", "Materials are ready. Select a building to preview it."),
+                ("en", "ui.construction.status.started", "Materials consumed. Construction has started."),
+                ("en", "ui.construction.status.in_progress", "This project is already under construction."),
+                ("en", "ui.construction.status.completed", "Construction completed."),
+                ("en", "ui.construction.progress", "Construction: {progress}%")
             };
             foreach (var entry in entries)
             {
@@ -2081,6 +2770,96 @@ namespace HorseParking.Presentation.Editor
             AssetDatabase.CreateAsset(settings, GameLocalizationSettingsPath);
             AssetDatabase.SaveAssets();
             return settings;
+        }
+
+        private static ConstructionRequirementsSettings LoadOrCreateConstructionRequirementsSettings()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<ConstructionRequirementsSettings>(
+                ConstructionRequirementsSettingsPath);
+            if (settings != null)
+            {
+                return settings;
+            }
+
+            EnsureFolder("Assets/_Project/Settings");
+            settings = ScriptableObject.CreateInstance<ConstructionRequirementsSettings>();
+            AssetDatabase.CreateAsset(settings, ConstructionRequirementsSettingsPath);
+            AssetDatabase.SaveAssets();
+            return settings;
+        }
+
+        private static Material LoadOrCreateConstructionSignMaterial()
+        {
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(ConstructionSignTexturePath)
+                ?? throw new System.InvalidOperationException(
+                    "Construction sign texture is missing: " + ConstructionSignTexturePath);
+            var material = AssetDatabase.LoadAssetAtPath<Material>(ConstructionSignMaterialPath);
+            if (material == null)
+            {
+                EnsureFolder("Assets/_Project/Content/Models/Props/ConstructionSign/Materials");
+                var shader = Shader.Find("Standard")
+                    ?? throw new System.InvalidOperationException("Standard shader is unavailable.");
+                material = new Material(shader) { name = "M_ConstructionSign" };
+                AssetDatabase.CreateAsset(material, ConstructionSignMaterialPath);
+            }
+
+            material.mainTexture = texture;
+            material.color = Color.white;
+            material.SetFloat("_Glossiness", 0.12f);
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        private static Material LoadOrCreateConstructionGhostMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(ConstructionGhostMaterialPath);
+            var shader = Shader.Find("Standard")
+                ?? throw new System.InvalidOperationException("Standard shader is unavailable.");
+            if (material == null)
+            {
+                EnsureFolder("Assets/_Project/Presentation/Construction/Materials");
+                material = new Material(shader) { name = "M_ConstructionGhost" };
+                AssetDatabase.CreateAsset(material, ConstructionGhostMaterialPath);
+            }
+
+            material.shader = shader;
+            material.color = new Color(0.25f, 0.75f, 1f, 0.28f);
+            material.SetOverrideTag("RenderType", "Transparent");
+            material.SetFloat("_Mode", 2f);
+            material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+            material.SetFloat("_ZWrite", 0f);
+            material.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.EnableKeyword("_ALPHABLEND_ON");
+            material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            material.DisableKeyword("_ALPHATEST_ON");
+            material.renderQueue = (int)RenderQueue.Transparent;
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        private static Material LoadOrCreateConstructionHammerMaterial()
+        {
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(ConstructionHammerTexturePath)
+                ?? throw new System.InvalidOperationException(
+                    "Construction hammer texture is missing: " + ConstructionHammerTexturePath);
+            var material = AssetDatabase.LoadAssetAtPath<Material>(ConstructionHammerMaterialPath);
+            if (material == null)
+            {
+                EnsureFolder("Assets/_Project/Content/Models/Props/ConstructionHammer");
+                EnsureFolder("Assets/_Project/Content/Models/Props/ConstructionHammer/Materials");
+                var shader = Shader.Find("Standard")
+                    ?? throw new System.InvalidOperationException("Standard shader is unavailable.");
+                material = new Material(shader) { name = "M_ConstructionHammer" };
+                AssetDatabase.CreateAsset(material, ConstructionHammerMaterialPath);
+            }
+
+            material.shader = Shader.Find("Standard");
+            material.mainTexture = texture;
+            material.color = Color.white;
+            material.SetFloat("_Glossiness", 0.18f);
+            EditorUtility.SetDirty(material);
+            return material;
         }
 
         private static void CreateLogisticsInventoryHud(GameCompositionRoot compositionRoot)

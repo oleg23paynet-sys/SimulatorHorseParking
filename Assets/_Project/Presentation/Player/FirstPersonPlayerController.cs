@@ -1,6 +1,7 @@
 using HorseParking.Application.Interaction;
 using HorseParking.Core.Interaction;
 using HorseParking.Presentation.Composition;
+using HorseParking.Presentation.Construction;
 using UnityEngine;
 
 namespace HorseParking.Presentation.Player
@@ -112,13 +113,16 @@ namespace HorseParking.Presentation.Player
             }
 
             var ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
-            if (!Physics.Raycast(ray, out var hit, interactionDistance))
+            IInteractionTarget? target = null;
+            if (Physics.Raycast(ray, out var hit, interactionDistance))
             {
-                return;
+                target = hit.collider.GetComponentInParent(typeof(IInteractionTarget)) as IInteractionTarget;
             }
 
-            var target = hit.collider.GetComponentInParent(typeof(IInteractionTarget)) as IInteractionTarget;
-            if (target == null)
+            if ((target == null || target.Availability != InteractionAvailability.Available)
+                && !ConstructionWorkerInteractionTarget.TryGetNearestAvailable(
+                    transform.position,
+                    out target))
             {
                 return;
             }

@@ -49,6 +49,9 @@ namespace HorseParking.Presentation.Logistics
         [SerializeField] private string cartId = "cart-starter";
         [Min(1)] [SerializeField] private int cartCapacityUnits = 12;
         [Min(0)] [SerializeField] private int startingGold = 30;
+        [Header("Demo economy")]
+        [SerializeField] private bool demoModeEnabled = true;
+        [Min(0)] [SerializeField] private int demoStartingGold = 500;
         [SerializeField] private string materialStoreId = "material-store";
         [SerializeField] private string materialStoreNameKey = "location.material_store";
         [Min(0.1f)] [SerializeField] private float cartTravelSpeedMetersPerSecond = 2.2f;
@@ -61,6 +64,8 @@ namespace HorseParking.Presentation.Logistics
 
         public string MaterialStoreId => materialStoreId;
         public float CartTravelSpeedMetersPerSecond => cartTravelSpeedMetersPerSecond;
+        public bool DemoModeEnabled => demoModeEnabled;
+        public int EffectiveStartingGold => demoModeEnabled ? demoStartingGold : startingGold;
 
         public void CreateUseCases(
             out LogisticsInventoryUseCase inventoryUseCase,
@@ -100,7 +105,12 @@ namespace HorseParking.Presentation.Logistics
                 throw new InvalidOperationException("Could not place the starter cart at the material store.");
             }
 
-            inventoryUseCase = new LogisticsInventoryUseCase(catalog, warehouse, cart, storePrices, startingGold);
+            inventoryUseCase = new LogisticsInventoryUseCase(
+                catalog,
+                warehouse,
+                cart,
+                storePrices,
+                EffectiveStartingGold);
             journeyUseCase = new CartJourneyUseCase(
                 cart,
                 new[] { materialStore });

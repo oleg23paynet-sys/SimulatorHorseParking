@@ -69,6 +69,11 @@ Assets/_Project/Content/Vehicles/DeliveryCart/textures.meta
 Assets/_Project/Content/Vehicles/DeliveryCart/Materials/M_DeliveryCartPlanks.mat*
 Assets/_Project/Content/Vehicles/DeliveryCart/Runtime/HandPushCart/SourceReference.txt*
 Assets/_Project/Content/Vehicles/DeliveryCart/Runtime/HandPushCart/textures/*_Roughness.jpg*
+
+# Downloaded source archive for the construction sign. Only the curated runtime
+# FBX, texture and attribution beside it belong to the project.
+Assets/_Project/Content/Models/Props/ConstructionSign/Source/
+Assets/_Project/Content/Models/Props/ConstructionSign/Source.meta
 Assets/_Project/Presentation/Animation/Clips/
 Assets/_Project/Presentation/Animation/Clips.meta
 Assets/_Project/Presentation/Animation/Controllers/AC_VoxelHorse.controller*
@@ -79,3 +84,32 @@ Assets/_Project/Scenes/HorseAnimsetRidingPreview.meta
 Assets/_Project/Scenes/HorseRiderCompositionPreview.unity*
 Tools/CreateTemporaryMountedClientRigV2.py
 Tools/ListBlendAnimations.py
+
+# Fantasy Goblin source-package content not used by the ParkingMvp workers.
+# Keep skin1 + its shared textures/materials; exclude demo, weapons and alternate skins.
+Assets/Goblin/goblin.unity*
+Assets/Goblin/Prefab/skin2.prefab*
+Assets/Goblin/Prefab/skin3.prefab*
+Assets/Goblin/Prefab/goblin_stonesword.prefab*
+Assets/Goblin/Base Mesh/skin2.fbx*
+Assets/Goblin/Base Mesh/skin3.fbx*
+Assets/Goblin/Base Mesh/goblin_stonesword.obj*
+Assets/Goblin/Base Mesh/Materials/
+Assets/Goblin/Base Mesh/Materials.meta
+Assets/Goblin/Materials/skin2/
+Assets/Goblin/Materials/skin2.meta
+Assets/Goblin/Materials/skin3/
+Assets/Goblin/Materials/skin3.meta
+Assets/Goblin/Materials/goblin_weapon.mat*
+Assets/Goblin/Textures/T_stonesword_*
+Assets/Goblin/Textures/T_gobs_blueskin_*
+Assets/Goblin/Textures/T_gobsredskin_*
+
+# Imported animation packages are local source libraries. Runtime keeps only the
+# curated FBX files under ConstructionWorkers.
+Assets/ExplosiveLLC/
+Assets/ExplosiveLLC.meta
+Assets/_Project/Content/Animations/Characters/KayKit_Character_Animations_1.1/
+Assets/_Project/Content/Animations/Characters/KayKit_Character_Animations_1.1.meta
+Assets/_Project/Content/Animations/Characters/ConstructionWorkers/Worker_Hammering.fbx*
+Assets/_Project/Content/Animations/Characters/ConstructionWorkers/Worker_Hammering_Return.fbx*
