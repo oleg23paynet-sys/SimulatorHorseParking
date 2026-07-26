@@ -31,7 +31,6 @@ namespace HorseParking.Presentation.Logistics
         [SerializeField] private DeliveryCartVisualAdapter visualAdapter = null!;
         [Min(0.1f)] [SerializeField] private float travelSpeedMetersPerSecond = 2.2f;
         [Min(1f)] [SerializeField] private float turnSpeedDegreesPerSecond = 140f;
-        [SerializeField] private float parkingFenceBypassZ = -8f;
         [Min(0.1f)] [SerializeField] private float collisionProbeRadius = 0.55f;
         [Min(0.1f)] [SerializeField] private float collisionProbeHeight = 0.8f;
 
@@ -75,19 +74,25 @@ namespace HorseParking.Presentation.Logistics
         private void ConfigureSafeRouteAroundParkingFence()
         {
             if (outboundRoute.Length < 2) return;
-            var warehouseEnd = outboundRoute[0].position;
-            var storeEnd = outboundRoute[outboundRoute.Length - 1].position;
-            var bypassZ = Mathf.Min(parkingFenceBypassZ, -10.5f);
-            const float outsideBuildingClearance = 2.4f;
-            routePositions = new[]
+            // The scene builder authors a compact service lane through the clear
+            // space behind the parking fence. Do not replace it with an oversized
+            // generated rectangle: that made the cart disappear into the distance.
+            routePositions = new Vector3[outboundRoute.Length];
+            for (var index = 0; index < outboundRoute.Length; index++)
             {
-                warehouseEnd,
-                new Vector3(warehouseEnd.x + outsideBuildingClearance, warehouseEnd.y, warehouseEnd.z),
-                new Vector3(warehouseEnd.x + outsideBuildingClearance, warehouseEnd.y, bypassZ),
-                new Vector3(storeEnd.x - outsideBuildingClearance, storeEnd.y, bypassZ),
-                new Vector3(storeEnd.x - outsideBuildingClearance, storeEnd.y, storeEnd.z),
-                storeEnd
-            };
+                routePositions[index] = outboundRoute[index].position;
+            }
+
+            if (routePositions.Length == 4)
+            {
+                // The vehicle root is at the centre of a 3.4 m long hand cart.
+                // Z=-8 leaves its wheel/handle envelope touching the exit fence.
+                // A one-metre service-lane margin clears the complete cart without
+                // restoring the former X=+/-9.6, Z=-10.5 perimeter loop.
+                const float compactSafeLaneZ = -9f;
+                routePositions[1].z = Mathf.Min(routePositions[1].z, compactSafeLaneZ);
+                routePositions[2].z = Mathf.Min(routePositions[2].z, compactSafeLaneZ);
+            }
         }
 
         private void Update()

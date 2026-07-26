@@ -15,7 +15,7 @@ MonoBehaviour:
   warehouseId: warehouse-main
   warehouseCapacityUnits: 200
   cartId: cart-starter
-  cartCapacityUnits: 12
+  cartCapacityUnits: 32
   startingGold: 30
   demoModeEnabled: 1
   demoStartingGold: 500

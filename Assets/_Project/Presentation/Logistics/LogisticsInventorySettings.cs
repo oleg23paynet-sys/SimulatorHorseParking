@@ -47,7 +47,9 @@ namespace HorseParking.Presentation.Logistics
         [SerializeField] private string warehouseId = "warehouse-main";
         [Min(1)] [SerializeField] private int warehouseCapacityUnits = 200;
         [SerializeField] private string cartId = "cart-starter";
-        [Min(1)] [SerializeField] private int cartCapacityUnits = 12;
+        // Demo capacity: 12 wood + 8 stone + 6 iron fit in one mixed supply run
+        // with the current per-resource capacity costs (1, 1 and 2).
+        [Min(1)] [SerializeField] private int cartCapacityUnits = 32;
         [Min(0)] [SerializeField] private int startingGold = 30;
         [Header("Demo economy")]
         [SerializeField] private bool demoModeEnabled = true;

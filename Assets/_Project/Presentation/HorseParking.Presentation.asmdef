@@ -1,7 +1,12 @@
 {
   "name": "HorseParking.Presentation",
   "rootNamespace": "HorseParking.Presentation",
-  "references": ["HorseParking.Core", "HorseParking.Application", "HorseParking.Infrastructure"],
+  "references": [
+    "HorseParking.Core",
+    "HorseParking.Application",
+    "HorseParking.Infrastructure",
+    "PrimeTween.Runtime"
+  ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

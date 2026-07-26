@@ -54,7 +54,16 @@ namespace HorseParking.Presentation.Logistics
                 return;
             }
 
+            compositionRoot.LogisticsInventoryUseCase.GoldChanged += Refresh;
             Refresh();
+        }
+
+        private void OnDestroy()
+        {
+            if (compositionRoot != null && compositionRoot.HasLogisticsInventory)
+            {
+                compositionRoot.LogisticsInventoryUseCase.GoldChanged -= Refresh;
+            }
         }
 
         private void Update()

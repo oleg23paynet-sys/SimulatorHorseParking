@@ -9,7 +9,9 @@ using HorseParking.Presentation.Parking;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
+using Unity.AI.Navigation;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.EventSystems;
 using UnityEngine.Rendering;
 using UnityEngine.UI;
@@ -28,15 +30,20 @@ namespace HorseParking.Presentation.Editor
         private const string ConstructionSignTexturePath = "Assets/_Project/Content/Models/Props/ConstructionSign/Textures/T_ConstructionSign_BaseColor.jpeg";
         private const string ConstructionSignMaterialPath = "Assets/_Project/Content/Models/Props/ConstructionSign/Materials/M_ConstructionSign.mat";
         private const string ConstructionBuildingModelPath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/blue/building_archeryrange_blue.fbx";
+        private const string ConstructionStageAModelPath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/neutral/building_stage_A.fbx";
+        private const string ConstructionStageBModelPath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/neutral/building_stage_B.fbx";
+        private const string ConstructionStageCModelPath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/neutral/building_stage_C.fbx";
         private const string ConstructionWorkerModelPath = "Assets/Goblin/Prefab/skin1.prefab";
         private const string ConstructionWorkerAvatarPath = "Assets/Goblin/Base Mesh/skin1.fbx";
         private const string ConstructionWorkerIdleAnimationPath = "Assets/_Project/Content/Animations/Characters/ConstructionWorkers/Worker_Idle.fbx";
         private const string ConstructionWorkerWalkAnimationPath = "Assets/_Project/Content/Animations/Characters/ConstructionWorkers/Worker_Walk.fbx";
+        private const string ConstructionWorkerSpawnAnimationPath = "Assets/_Project/Content/Animations/Characters/ConstructionWorkers/Worker_SpawnGround_KayKit.fbx";
         private const string ConstructionWorkerHammeringAnimationPath = "Assets/_Project/Content/Animations/Characters/ConstructionWorkers/Worker_Tools_KayKit.fbx";
         private const string ConstructionWorkerHitAnimationPath = "Assets/_Project/Content/Animations/Characters/ConstructionWorkers/Worker_Hit_KayKit.fbx";
         private const string ConstructionHammerModelPath = "Assets/_Project/Content/Models/Props/ConstructionHammer/SM_ConstructionHammer.fbx";
         private const string ConstructionHammerTexturePath = "Assets/_Project/Content/Models/Props/ConstructionHammer/Textures/T_ConstructionHammer_BaseColor.png";
         private const string ConstructionHammerMaterialPath = "Assets/_Project/Content/Models/Props/ConstructionHammer/Materials/M_ConstructionHammer.mat";
+        private const string ConstructionGoblinSpawnVfxPath = "Assets/_Project/Content/VFX/GoblinSpawn/Prefabs/VFX_GoblinSpawnVortex.prefab";
         private const string ConstructionGhostMaterialPath = "Assets/_Project/Presentation/Construction/Materials/M_ConstructionGhost.mat";
         private const string ConstructionWorkerControllerPath = "Assets/_Project/Presentation/Animation/Controllers/AC_ConstructionWorker.controller";
         private const string DeliveryCartRuntimeFolder = "Assets/_Project/Content/Vehicles/DeliveryCart/Runtime/HandPushCart";
@@ -100,8 +107,14 @@ namespace HorseParking.Presentation.Editor
         private const string StorePath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/blue/building_market_blue.fbx";
         private const string WarehousePath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/blue/building_lumbermill_blue.fbx";
         private const string GatePath = "Assets/_Project/Content/Models/Environment/KayKitMedievalHexagon/Assets/fbx(unity)/buildings/neutral/fence_wood_straight_gate.fbx";
-        private const string PaymentPouchPath = "Assets/_Project/Content/Models/Props/PaymentPouch/SM_PaymentPouch.fbx";
-        private const float PaymentPouchCordLength = 0.14f;
+        private const string MoneyBagModelPath = "Assets/_Project/Content/Props/MoneyBag/Models/SM_MoneyBag.fbx";
+        private const string MoneyBagBaseColorPath = "Assets/_Project/Content/Props/MoneyBag/Textures/MoneyBag_Material_Base_Color.png";
+        private const string MoneyBagNormalPath = "Assets/_Project/Content/Props/MoneyBag/Textures/MoneyBag_Material_Normal.png";
+        private const string MoneyBagMetallicPath = "Assets/_Project/Content/Props/MoneyBag/Textures/MoneyBag_Material_Metallic.png";
+        private const string MoneyBagMaterialPath = "Assets/_Project/Content/Props/MoneyBag/Materials/M_MoneyBag.mat";
+        private const string MoneyBagRopeMaterialPath = "Assets/_Project/Content/Props/MoneyBag/Materials/M_MoneyBagRope.mat";
+        private const string MoneyBagPrefabPath = "Assets/_Project/Content/Props/MoneyBag/Prefabs/PF_MoneyBag.prefab";
+        private const float MoneyBagRopeLength = 0.19f;
         private const string HorseMaterialPath = "Assets/_Project/Content/Materials/Characters/Horse/M_HorseChestnut.mat";
         private const string MountedHorseMaterialPath = "Assets/_Project/Content/Materials/Characters/MountedClients/M_RedHorseRiderHorse.mat";
         private const string MountedHorseTexturePath = "Assets/_Project/Content/Models/Characters/MountedClients/RedHorseRider/textures/HorseWagonTexture2.png";
@@ -211,6 +224,28 @@ namespace HorseParking.Presentation.Editor
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
             Debug.Log("Stage 3.2 automatic delivery cart journey installed in " + ScenePath);
+        }
+
+        [MenuItem("Horse Parking/Repair Compact Delivery Cart Route")]
+        public static void RepairCompactDeliveryCartRoute()
+        {
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            SetCartRoutePoint("CartRoute_WarehouseDelivery", new Vector3(7.2f, groundSurfaceY, -3.8f));
+            SetCartRoutePoint("CartRoute_WarehouseApproach", new Vector3(7.2f, groundSurfaceY, -9f));
+            SetCartRoutePoint("CartRoute_StoreApproach", new Vector3(-7.2f, groundSurfaceY, -9f));
+            SetCartRoutePoint("CartRoute_MaterialStoreLoading", new Vector3(-7.2f, groundSurfaceY, -3.8f));
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log("Compact delivery-cart route repaired in " + ScenePath);
+        }
+
+        private static void SetCartRoutePoint(string objectName, Vector3 position)
+        {
+            var point = GameObject.Find(objectName)
+                ?? throw new System.InvalidOperationException(
+                    "ParkingMvp is missing route point: " + objectName);
+            position.y = point.transform.position.y;
+            point.transform.position = position;
         }
 
         [MenuItem("Horse Parking/Repair Delivery Cart Cargo And Route")]
@@ -344,8 +379,13 @@ namespace HorseParking.Presentation.Editor
                      {
                          ConstructionSignModelPath,
                          ConstructionBuildingModelPath,
+                         ConstructionStageAModelPath,
+                         ConstructionStageBModelPath,
+                         ConstructionStageCModelPath,
                          ConstructionWorkerModelPath,
-                         ConstructionHammerModelPath
+                         ConstructionHammerModelPath,
+                         ConstructionGoblinSpawnVfxPath,
+                         ConstructionWorkerSpawnAnimationPath
                      })
             {
                 if (AssetDatabase.LoadAssetAtPath<GameObject>(requiredAsset) == null)
@@ -368,6 +408,8 @@ namespace HorseParking.Presentation.Editor
                 playerController,
                 localizationSettings);
             CreateStage36ConstructionProcess(canvasObject, compositionRoot);
+            RebuildConstructionWorkerNavigation();
+            RepairPaymentRewardPresentation();
 
             EditorUtility.SetDirty(compositionRoot);
             EditorUtility.SetDirty(constructionSettings);
@@ -376,6 +418,17 @@ namespace HorseParking.Presentation.Editor
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
             Debug.Log("Stage 3.6 construction process installed in " + ScenePath);
+        }
+
+        [MenuItem("Horse Parking/Install Payment Money Bag Presentation")]
+        public static void InstallPaymentMoneyBagPresentation()
+        {
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            RepairPaymentRewardPresentation();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Payment money-bag presentation installed in " + ScenePath);
         }
 
         private static void CreateLighting()
@@ -825,6 +878,13 @@ namespace HorseParking.Presentation.Editor
 
         private static Transform CreatePaymentBagAnchor(GameObject horseVisual)
         {
+            var anchor = new GameObject("PaymentBagAnchor_BridleLowerPoint").transform;
+            AlignPaymentBagAnchor(horseVisual, anchor);
+            return anchor;
+        }
+
+        private static void AlignPaymentBagAnchor(GameObject horseVisual, Transform anchor)
+        {
             var head = FindDescendant(horseVisual.transform, "Head");
             var jaw = FindDescendant(horseVisual.transform, "Jaw") ?? head;
             var leftBridlePoint = FindDescendant(horseVisual.transform, "Reins_Bn_Head_L");
@@ -838,17 +898,14 @@ namespace HorseParking.Presentation.Editor
             var mouthDirection = head.position - bounds.center;
             mouthDirection.y = 0f;
             mouthDirection = mouthDirection.sqrMagnitude < 0.001f ? horseVisual.transform.forward : mouthDirection.normalized;
-            var anchor = new GameObject("PaymentBagAnchor_BridleLowerPoint").transform;
             // Use the package's ready bridle/rein attachment bones instead of the
-            // mouth mesh. Their midpoint is the bit; lowering it keeps the knot
-            // outside the lips and lets the pouch hang freely below the chin.
+            // mouth mesh. Their midpoint is the bit and is the pivot of the cord.
             var bridleMidpoint = leftBridlePoint != null && rightBridlePoint != null
                 ? Vector3.Lerp(leftBridlePoint.position, rightBridlePoint.position, 0.5f)
                 : head.position + (mouthDirection * 0.27f) - (Vector3.up * 0.22f);
-            anchor.position = bridleMidpoint - (Vector3.up * PaymentPouchCordLength);
+            anchor.position = bridleMidpoint;
             anchor.rotation = Quaternion.LookRotation(mouthDirection, Vector3.up);
             anchor.SetParent(jaw, true);
-            return anchor;
         }
 
         private static Transform FindDescendant(Transform root, string name)
@@ -949,38 +1006,204 @@ namespace HorseParking.Presentation.Editor
             // offset beneath it, so attaching the root to the mouth makes the pouch
             // hang naturally instead of fastening its whole body to the horse.
             var sack = new GameObject("PaymentSack_01");
-            var cord = new GameObject("PaymentPouchCord");
-            cord.transform.SetParent(sack.transform, false);
-            var cordRenderer = cord.AddComponent<LineRenderer>();
-            cordRenderer.useWorldSpace = false;
-            cordRenderer.positionCount = 2;
-            cordRenderer.SetPosition(0, Vector3.zero);
-            cordRenderer.SetPosition(1, Vector3.up * PaymentPouchCordLength);
-            cordRenderer.startWidth = 0.018f;
-            cordRenderer.endWidth = 0.014f;
-            cordRenderer.numCapVertices = 6;
-            cordRenderer.numCornerVertices = 4;
-            cordRenderer.generateLightingData = true;
-            cordRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            cordRenderer.receiveShadows = false;
-            cordRenderer.sharedMaterial = CreateHorseAnimsetMaterial(
-                "M_PaymentPouchCord",
-                new Color(0.12f, 0.045f, 0.018f),
-                null,
-                null,
-                null);
-            var sackVisual = InstantiateAsset(PaymentPouchPath, "PaymentPouchVisual");
-            sackVisual.transform.SetParent(sack.transform, false);
-            sackVisual.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
-            ScaleToHeight(sackVisual, 0.18f);
-            var sackBounds = GetEnabledRendererBounds(sackVisual);
-            sackVisual.transform.position += new Vector3(
-                -sackBounds.center.x,
-                -sackBounds.max.y,
-                -sackBounds.center.z);
+            ConfigurePaymentSackVisual(sack);
             sack.transform.position = new Vector3(0.8f, 0.2f, -5f);
-            AddMeshColliders(sackVisual);
             return (gate, sack);
+        }
+
+        private static void ConfigurePaymentSackVisual(GameObject sack)
+        {
+            for (var index = sack.transform.childCount - 1; index >= 0; index--)
+            {
+                Object.DestroyImmediate(sack.transform.GetChild(index).gameObject);
+            }
+
+            var swingPivot = new GameObject(
+                "BagSwingPivot",
+                typeof(PaymentBagSwingPresenter));
+            swingPivot.transform.SetParent(sack.transform, false);
+            var rope = new GameObject("Rope");
+            rope.transform.SetParent(swingPivot.transform, false);
+            var ropeRenderer = rope.AddComponent<LineRenderer>();
+            ropeRenderer.useWorldSpace = true;
+            ropeRenderer.positionCount = 8;
+            ropeRenderer.startWidth = 0.0125f;
+            ropeRenderer.endWidth = 0.01f;
+            ropeRenderer.textureMode = LineTextureMode.Stretch;
+            ropeRenderer.alignment = LineAlignment.View;
+            ropeRenderer.numCapVertices = 8;
+            ropeRenderer.numCornerVertices = 6;
+            ropeRenderer.generateLightingData = false;
+            ropeRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            ropeRenderer.receiveShadows = false;
+            ropeRenderer.sharedMaterial = LoadOrCreateMoneyBagRopeMaterial();
+
+            var moneyBagPrefab = CreateOrUpdateMoneyBagPrefab();
+            var moneyBag = (GameObject)PrefabUtility.InstantiatePrefab(moneyBagPrefab);
+            moneyBag.name = "MoneyBag";
+            moneyBag.transform.SetParent(rope.transform, false);
+            moneyBag.transform.localPosition = Vector3.down * MoneyBagRopeLength;
+            moneyBag.transform.localRotation = Quaternion.identity;
+            moneyBag.transform.localScale = Vector3.one;
+
+            var bagTop = FindDescendant(moneyBag.transform, "MoneyBagTop") ?? moneyBag.transform;
+            var ropePresenter = rope.AddComponent<PaymentBagRopePresenter>();
+            ropePresenter.Configure(sack.transform, bagTop);
+        }
+
+        private static GameObject CreateOrUpdateMoneyBagPrefab()
+        {
+            var source = AssetDatabase.LoadAssetAtPath<GameObject>(MoneyBagModelPath)
+                ?? throw new System.InvalidOperationException(
+                    "Money bag FBX is missing: " + MoneyBagModelPath);
+            var material = LoadOrCreateMoneyBagMaterial();
+            EnsureFolder("Assets/_Project/Content/Props/MoneyBag/Prefabs");
+
+            var prefabRoot = new GameObject("PF_MoneyBag");
+            var visual = (GameObject)PrefabUtility.InstantiatePrefab(source);
+            visual.name = "MoneyBagVisual";
+            visual.transform.SetParent(prefabRoot.transform, false);
+            visual.transform.localPosition = Vector3.zero;
+            visual.transform.localRotation = Quaternion.identity;
+            visual.transform.localScale = Vector3.one;
+
+            foreach (var renderer in visual.GetComponentsInChildren<Renderer>(true))
+            {
+                var assigned = new Material[renderer.sharedMaterials.Length];
+                for (var index = 0; index < assigned.Length; index++)
+                {
+                    assigned[index] = material;
+                }
+
+                renderer.sharedMaterials = assigned;
+            }
+
+            ScaleToHeight(visual, 0.22f);
+            var bounds = GetEnabledRendererBounds(visual);
+            var knotPosition = new Vector3(bounds.center.x, bounds.max.y, bounds.center.z);
+            visual.transform.position -= knotPosition;
+            AddMeshColliders(visual);
+
+            var top = new GameObject("MoneyBagTop").transform;
+            top.SetParent(prefabRoot.transform, false);
+            top.localPosition = Vector3.zero;
+            top.localRotation = Quaternion.identity;
+
+            PrefabUtility.SaveAsPrefabAsset(prefabRoot, MoneyBagPrefabPath);
+            Object.DestroyImmediate(prefabRoot);
+            return AssetDatabase.LoadAssetAtPath<GameObject>(MoneyBagPrefabPath)
+                ?? throw new System.InvalidOperationException(
+                    "Money bag prefab could not be created: " + MoneyBagPrefabPath);
+        }
+
+        private static Material LoadOrCreateMoneyBagMaterial()
+        {
+            ConfigureMoneyBagTextureImport();
+            var baseColor = AssetDatabase.LoadAssetAtPath<Texture2D>(MoneyBagBaseColorPath)
+                ?? throw new System.InvalidOperationException(
+                    "Money bag base-color texture is missing: " + MoneyBagBaseColorPath);
+            var normal = AssetDatabase.LoadAssetAtPath<Texture2D>(MoneyBagNormalPath)
+                ?? throw new System.InvalidOperationException(
+                    "Money bag normal texture is missing: " + MoneyBagNormalPath);
+            var metallic = AssetDatabase.LoadAssetAtPath<Texture2D>(MoneyBagMetallicPath)
+                ?? throw new System.InvalidOperationException(
+                    "Money bag metallic texture is missing: " + MoneyBagMetallicPath);
+            var shader = GraphicsSettings.currentRenderPipeline == null
+                ? Shader.Find("Standard")
+                : Shader.Find("Universal Render Pipeline/Lit");
+            shader ??= Shader.Find("Standard");
+            if (shader == null)
+            {
+                throw new System.InvalidOperationException("A compatible lit shader is unavailable.");
+            }
+
+            var material = AssetDatabase.LoadAssetAtPath<Material>(MoneyBagMaterialPath);
+            if (material == null)
+            {
+                EnsureFolder("Assets/_Project/Content/Props/MoneyBag/Materials");
+                material = new Material(shader) { name = "M_MoneyBag" };
+                AssetDatabase.CreateAsset(material, MoneyBagMaterialPath);
+            }
+
+            material.shader = shader;
+            material.mainTexture = baseColor;
+            if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", baseColor);
+            if (material.HasProperty("_BumpMap")) material.SetTexture("_BumpMap", normal);
+            if (material.HasProperty("_MetallicGlossMap")) material.SetTexture("_MetallicGlossMap", metallic);
+            if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", 0.25f);
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.2f);
+            if (material.HasProperty("_Glossiness")) material.SetFloat("_Glossiness", 0.2f);
+            material.EnableKeyword("_NORMALMAP");
+            material.EnableKeyword("_METALLICSPECGLOSSMAP");
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        private static Material LoadOrCreateMoneyBagRopeMaterial()
+        {
+            var shader = GraphicsSettings.currentRenderPipeline == null
+                ? Shader.Find("Unlit/Color")
+                : Shader.Find("Universal Render Pipeline/Unlit");
+            shader ??= Shader.Find("Unlit/Color");
+            if (shader == null)
+            {
+                throw new System.InvalidOperationException("A compatible unlit shader is unavailable.");
+            }
+
+            var material = AssetDatabase.LoadAssetAtPath<Material>(MoneyBagRopeMaterialPath);
+            if (material == null)
+            {
+                EnsureFolder("Assets/_Project/Content/Props/MoneyBag/Materials");
+                material = new Material(shader) { name = "M_MoneyBagRope" };
+                AssetDatabase.CreateAsset(material, MoneyBagRopeMaterialPath);
+            }
+
+            material.shader = shader;
+            var ropeColor = new Color(0.16f, 0.055f, 0.018f, 1f);
+            if (material.HasProperty("_BaseColor"))
+            {
+                material.SetColor("_BaseColor", ropeColor);
+            }
+
+            if (material.HasProperty("_Color"))
+            {
+                material.SetColor("_Color", ropeColor);
+            }
+
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        private static void ConfigureMoneyBagTextureImport()
+        {
+            var normalImporter = AssetImporter.GetAtPath(MoneyBagNormalPath) as TextureImporter;
+            if (normalImporter != null && normalImporter.textureType != TextureImporterType.NormalMap)
+            {
+                normalImporter.textureType = TextureImporterType.NormalMap;
+                normalImporter.SaveAndReimport();
+            }
+
+            var metallicImporter = AssetImporter.GetAtPath(MoneyBagMetallicPath) as TextureImporter;
+            if (metallicImporter != null && metallicImporter.sRGBTexture)
+            {
+                metallicImporter.sRGBTexture = false;
+                metallicImporter.SaveAndReimport();
+            }
+        }
+
+        private static void RepairPaymentRewardPresentation()
+        {
+            var clientRoot = GameObject.Find("ClientMountedHorseRider_01")
+                ?? throw new System.InvalidOperationException("Parking mounted client root is missing.");
+            var horseVisualTransform = FindDescendant(clientRoot.transform, "HorseAnimsetPro_Visual")
+                ?? throw new System.InvalidOperationException("Parking horse visual is missing.");
+            var paymentAnchor = FindDescendant(clientRoot.transform, "PaymentBagAnchor_BridleLowerPoint")
+                ?? throw new System.InvalidOperationException("Parking payment-bag anchor is missing.");
+            var sack = GameObject.Find("PaymentSack_01")
+                ?? throw new System.InvalidOperationException("Parking payment sack is missing.");
+
+            AlignPaymentBagAnchor(horseVisualTransform.gameObject, paymentAnchor);
+            ConfigurePaymentSackVisual(sack);
         }
 
         private static void CreateParkingRuntime(
@@ -1238,8 +1461,8 @@ namespace HorseParking.Presentation.Editor
             var positions = new[]
             {
                 new Vector3(7.2f, groundSurfaceY, -3.8f),
-                new Vector3(7.2f, groundSurfaceY, -8f),
-                new Vector3(-7.2f, groundSurfaceY, -8f),
+                new Vector3(7.2f, groundSurfaceY, -9f),
+                new Vector3(-7.2f, groundSurfaceY, -9f),
                 new Vector3(-7.2f, groundSurfaceY, -3.8f)
             };
             var names = new[]
@@ -2032,6 +2255,46 @@ namespace HorseParking.Presentation.Editor
             ScaleToHeight(progressModel, 3.2f);
             PlaceBaseAtHeight(progressModel, buildingPosition.y);
             progressModel.transform.SetParent(progressAnchor, true);
+            // This is never the completed model: the cyan material marks the roof/details
+            // phase while the original textured FBX stays disabled until exactly 100%.
+            foreach (var renderer in progressModel.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.sharedMaterial = ghostMaterial;
+            }
+
+            var authoredStagePaths = new[]
+            {
+                ConstructionStageAModelPath,
+                ConstructionStageBModelPath,
+                ConstructionStageCModelPath
+            };
+            var authoredStageNames = new[]
+            {
+                "ParkingBuilding_StageA_Foundation",
+                "ParkingBuilding_StageB_Walls",
+                "ParkingBuilding_StageC_UpperFloor"
+            };
+            var authoredStages = new GameObject[authoredStagePaths.Length];
+            for (var index = 0; index < authoredStagePaths.Length; index++)
+            {
+                var stageAsset = AssetDatabase.LoadAssetAtPath<GameObject>(authoredStagePaths[index])
+                    ?? throw new System.InvalidOperationException(
+                        "Construction stage FBX is missing: " + authoredStagePaths[index]);
+                var stage = (GameObject)PrefabUtility.InstantiatePrefab(stageAsset);
+                stage.name = authoredStageNames[index];
+                stage.transform.SetParent(progressAnchor, true);
+                stage.transform.position = buildingPosition;
+                stage.transform.rotation = constructionRoot.transform.rotation;
+                stage.transform.localScale = progressModel.transform.localScale;
+                PlaceBaseAtHeight(stage, buildingPosition.y);
+                authoredStages[index] = stage;
+            }
+
+            var assemblyPresenter =
+                progressAnchor.gameObject.AddComponent<ConstructionBuildingAssemblyPresenter>();
+            assemblyPresenter.Configure(
+                progressModel.transform,
+                authoredStages);
 
             var completedVisual = (GameObject)PrefabUtility.InstantiatePrefab(buildingAsset);
             completedVisual.name = "ParkingBuilding_Completed";
@@ -2041,35 +2304,139 @@ namespace HorseParking.Presentation.Editor
             ScaleToHeight(completedVisual, 3.2f);
             PlaceBaseAtHeight(completedVisual, buildingPosition.y);
             AddMeshColliders(completedVisual);
+            CreateBoxNavMeshObstacle(
+                completedVisual.transform,
+                "CompletedBuilding_NavMeshObstacle",
+                GetBounds(completedVisual),
+                horizontalPadding: 0.06f);
 
             var workersRoot = new GameObject("ConstructionWorkers");
             workersRoot.transform.SetParent(constructionRoot.transform, false);
+            var workPointsRoot = new GameObject("ConstructionWorkPoints");
+            workPointsRoot.transform.SetParent(constructionRoot.transform, false);
+            var foundationWorkPointsRoot = new GameObject("FoundationWorkPoints");
+            foundationWorkPointsRoot.transform.SetParent(workPointsRoot.transform, false);
+            var wallWorkPointsRoot = new GameObject("WallWorkPoints");
+            wallWorkPointsRoot.transform.SetParent(workPointsRoot.transform, false);
+            var roofWorkPointsRoot = new GameObject("RoofWorkPoints");
+            roofWorkPointsRoot.transform.SetParent(workPointsRoot.transform, false);
+            var spawnPointsRoot = new GameObject("GoblinSpawnPoints");
+            spawnPointsRoot.transform.SetParent(constructionRoot.transform, false);
+            var exitPointsRoot = new GameObject("GoblinExitPoints");
+            exitPointsRoot.transform.SetParent(constructionRoot.transform, false);
             var directionToSign = stage35Root.transform.position - buildingPosition;
             directionToSign.y = 0f;
             directionToSign = directionToSign.sqrMagnitude > 0.001f
                 ? directionToSign.normalized
                 : Vector3.back;
             var workerSide = Vector3.Cross(Vector3.up, directionToSign).normalized;
-            var workerOneBuildPosition = buildingPosition + directionToSign * 1.9f - workerSide * 1.25f;
-            var workerTwoBuildPosition = buildingPosition + directionToSign * 1.9f + workerSide * 1.25f;
-            var workerOneSpawnPosition = buildingPosition + directionToSign * 4.6f - workerSide * 1.65f;
-            var workerTwoSpawnPosition = buildingPosition + directionToSign * 4.9f + workerSide * 1.65f;
+            var buildingBounds = GetBounds(progressModel);
+            var buildingCenterOffset = buildingBounds.center - buildingPosition;
+            var forwardCenterOffset = Vector3.Dot(buildingCenterOffset, directionToSign);
+            var forwardExtent =
+                Mathf.Abs(directionToSign.x) * buildingBounds.extents.x
+                + Mathf.Abs(directionToSign.z) * buildingBounds.extents.z;
+            var sideExtent =
+                Mathf.Abs(workerSide.x) * buildingBounds.extents.x
+                + Mathf.Abs(workerSide.z) * buildingBounds.extents.z;
+            var sideCenterOffset = Vector3.Dot(buildingCenterOffset, workerSide);
+            var frontSurfaceCenter =
+                buildingPosition + directionToSign * (forwardCenterOffset + forwardExtent);
+            frontSurfaceCenter.y = buildingPosition.y;
+            var sideSurfaceCenter =
+                buildingPosition + workerSide * (sideCenterOffset + sideExtent);
+            sideSurfaceCenter.y = buildingPosition.y;
+            var oppositeSideSurfaceCenter =
+                buildingPosition + workerSide * (sideCenterOffset - sideExtent);
+            oppositeSideSurfaceCenter.y = buildingPosition.y;
+            var workClearance = 0.3f;
+            var frontWorkSpread = Mathf.Max(0.3f, sideExtent * 0.34f);
+
+            // These authored points are beside real building surfaces, within a goblin's
+            // hammer reach. There is no scaffold proxy or invisible scaffold obstacle.
+            var workPoints = new[]
+            {
+                CreateConstructionRoutePoint(
+                    foundationWorkPointsRoot.transform,
+                    "ConstructionWorkPoint_01",
+                    frontSurfaceCenter - workerSide * frontWorkSpread
+                        + directionToSign * workClearance,
+                    frontSurfaceCenter - workerSide * frontWorkSpread),
+                CreateConstructionRoutePoint(
+                    foundationWorkPointsRoot.transform,
+                    "ConstructionWorkPoint_02",
+                    frontSurfaceCenter + workerSide * frontWorkSpread
+                        + directionToSign * workClearance,
+                    frontSurfaceCenter + workerSide * frontWorkSpread),
+                CreateConstructionRoutePoint(
+                    wallWorkPointsRoot.transform,
+                    "ConstructionWorkPoint_03",
+                    sideSurfaceCenter + directionToSign * (forwardExtent * 0.18f)
+                        + workerSide * workClearance,
+                    sideSurfaceCenter + directionToSign * (forwardExtent * 0.18f)),
+                CreateConstructionRoutePoint(
+                    roofWorkPointsRoot.transform,
+                    "ConstructionWorkPoint_04",
+                    oppositeSideSurfaceCenter + directionToSign * (forwardExtent * 0.18f)
+                        - workerSide * workClearance,
+                    oppositeSideSurfaceCenter + directionToSign * (forwardExtent * 0.18f))
+            };
+            var spawnDistance = 1.45f;
+            var spawnPoints = new[]
+            {
+                CreateConstructionRoutePoint(
+                    spawnPointsRoot.transform,
+                    "GoblinSpawnPoint_01",
+                    workPoints[0].position + directionToSign * spawnDistance - workerSide * 0.2f,
+                    workPoints[0].position),
+                CreateConstructionRoutePoint(
+                    spawnPointsRoot.transform,
+                    "GoblinSpawnPoint_02",
+                    workPoints[1].position + directionToSign * spawnDistance + workerSide * 0.2f,
+                    workPoints[1].position),
+                CreateConstructionRoutePoint(
+                    spawnPointsRoot.transform,
+                    "GoblinSpawnPoint_03",
+                    sideSurfaceCenter + workerSide * (workClearance + spawnDistance)
+                        + directionToSign * (forwardExtent * 0.42f),
+                    workPoints[2].position),
+                CreateConstructionRoutePoint(
+                    spawnPointsRoot.transform,
+                    "GoblinSpawnPoint_04",
+                    oppositeSideSurfaceCenter - workerSide * (workClearance + spawnDistance)
+                        + directionToSign * (forwardExtent * 0.42f),
+                    workPoints[3].position)
+            };
+            var workerOneExitPoint = CreateConstructionRoutePoint(
+                exitPointsRoot.transform,
+                "GoblinExitPoint_01",
+                spawnPoints[2].position,
+                spawnPoints[2].position + directionToSign);
+            var workerTwoExitPoint = CreateConstructionRoutePoint(
+                exitPointsRoot.transform,
+                "GoblinExitPoint_02",
+                spawnPoints[3].position,
+                spawnPoints[3].position + directionToSign);
             var workers = new[]
             {
                 CreateConstructionWorker(
                     compositionRoot,
                     workersRoot.transform,
                     "ConstructionWorker_01",
-                    workerOneSpawnPosition,
-                    workerOneBuildPosition,
-                    Quaternion.LookRotation(buildingPosition - workerOneBuildPosition, Vector3.up)),
+                    spawnPoints,
+                    0,
+                    workPoints[0],
+                    workerOneExitPoint,
+                    constructionRoot.transform),
                 CreateConstructionWorker(
                     compositionRoot,
                     workersRoot.transform,
                     "ConstructionWorker_02",
-                    workerTwoSpawnPosition,
-                    workerTwoBuildPosition,
-                    Quaternion.LookRotation(buildingPosition - workerTwoBuildPosition, Vector3.up))
+                    spawnPoints,
+                    1,
+                    workPoints[1],
+                    workerTwoExitPoint,
+                    constructionRoot.transform)
             };
 
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -2127,6 +2494,7 @@ namespace HorseParking.Presentation.Editor
                 compositionRoot,
                 ghostPreview,
                 progressAnchor,
+                assemblyPresenter,
                 completedVisual,
                 workersRoot,
                 workers,
@@ -2147,9 +2515,11 @@ namespace HorseParking.Presentation.Editor
             GameCompositionRoot compositionRoot,
             Transform parent,
             string name,
-            Vector3 spawnWorldPosition,
-            Vector3 buildWorldPosition,
-            Quaternion buildWorldRotation)
+            Transform[] spawnPoints,
+            int preferredSpawnPointIndex,
+            Transform workPoint,
+            Transform exitPoint,
+            Transform constructionSite)
         {
             var workerAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ConstructionWorkerModelPath)
                 ?? throw new System.InvalidOperationException("Construction worker FBX is missing.");
@@ -2167,18 +2537,19 @@ namespace HorseParking.Presentation.Editor
 
             var worker = (GameObject)PrefabUtility.InstantiatePrefab(workerAsset);
             worker.name = name;
-            worker.transform.position = spawnWorldPosition;
+            var initialSpawnPoint = spawnPoints[preferredSpawnPointIndex % spawnPoints.Length];
+            worker.transform.position = initialSpawnPoint.position;
             worker.transform.rotation = Quaternion.LookRotation(
-                buildWorldPosition - spawnWorldPosition,
+                workPoint.position - initialSpawnPoint.position,
                 Vector3.up);
             ScaleToHeight(worker, 1.15f);
-            PlaceBaseAtHeight(worker, spawnWorldPosition.y);
+            PlaceBaseAtHeight(worker, initialSpawnPoint.position.y);
             worker.transform.SetParent(parent, true);
 
             var hammer = (GameObject)PrefabUtility.InstantiatePrefab(hammerAsset);
             hammer.name = name + "_Hammer";
             hammer.transform.position = worker.transform.position + worker.transform.up * 0.72f;
-            ScaleToHeight(hammer, 0.42f);
+            ScaleToHeight(hammer, 0.23f);
             var hammerMaterial = LoadOrCreateConstructionHammerMaterial();
             foreach (var renderer in hammer.GetComponentsInChildren<Renderer>(true))
             {
@@ -2191,10 +2562,23 @@ namespace HorseParking.Presentation.Editor
                 ?? throw new System.InvalidOperationException("Construction worker Humanoid avatar is invalid.");
             animator.avatar = workerAvatar;
             animator.runtimeAnimatorController = GetOrCreateConstructionWorkerController();
+            // NavMesh owns translation/rotation. FBX root motion remains visual only,
+            // avoiding the old behaviour where workers crossed scaffolds and walls.
             animator.applyRootMotion = false;
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            var navigationAgent = worker.AddComponent<NavMeshAgent>();
+            navigationAgent.radius = 0.24f;
+            navigationAgent.height = 1.15f;
+            navigationAgent.baseOffset = 0f;
+            navigationAgent.speed = 1.35f;
+            navigationAgent.angularSpeed = 540f;
+            navigationAgent.acceleration = 7f;
+            navigationAgent.stoppingDistance = 0.12f;
+            navigationAgent.autoBraking = true;
+            navigationAgent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+            navigationAgent.enabled = false;
+            var groundVortex = CreateConstructionGroundVortex(worker.transform, name);
             var motion = worker.AddComponent<ConstructionWorkerMotionPresenter>();
-            motion.Configure(animator, buildWorldPosition, buildWorldRotation);
             var hitCollider = worker.AddComponent<CapsuleCollider>();
             hitCollider.center = new Vector3(0f, 0.58f, 0f);
             hitCollider.radius = 0.32f;
@@ -2217,6 +2601,12 @@ namespace HorseParking.Presentation.Editor
             hitMain.startSize = 0.08f;
             hitMain.startColor = new Color(1f, 0.72f, 0.18f, 1f);
             hitMain.maxParticles = 12;
+            var hitRenderer = hitEffectObject.GetComponent<ParticleSystemRenderer>();
+            hitRenderer.sharedMaterial = LoadConstructionWorkerHitMaterial();
+            hitRenderer.renderMode = ParticleSystemRenderMode.Billboard;
+            hitRenderer.alignment = ParticleSystemRenderSpace.View;
+            hitRenderer.minParticleSize = 0.01f;
+            hitRenderer.maxParticleSize = 0.06f;
             var hitEmission = hitEffect.emission;
             hitEmission.enabled = false;
             hitEffect.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
@@ -2228,14 +2618,72 @@ namespace HorseParking.Presentation.Editor
             var hand = animator.isHuman
                 ? animator.GetBoneTransform(HumanBodyBones.RightHand)
                 : null;
-            hammer.transform.SetParent(hand != null ? hand : worker.transform, true);
+            var hammerSocket = new GameObject("HammerSocket").transform;
+            hammerSocket.SetParent(hand != null ? hand : worker.transform, false);
             if (hand != null)
             {
-                hammer.transform.localPosition = new Vector3(0.03f, 0.02f, 0.02f);
-                hammer.transform.localRotation = Quaternion.Euler(10f, 5f, 85f);
+                hammerSocket.localPosition = new Vector3(0.025f, 0.015f, 0.02f);
+                hammerSocket.localRotation = Quaternion.Euler(10f, 5f, 85f);
+            }
+            else
+            {
+                hammerSocket.localPosition = new Vector3(0.24f, 0.72f, 0.08f);
+                hammerSocket.localRotation = Quaternion.Euler(10f, 5f, 85f);
             }
 
+            hammer.transform.SetParent(hammerSocket, false);
+            hammer.transform.localPosition = Vector3.zero;
+            hammer.transform.localRotation = Quaternion.identity;
+            motion.Configure(
+                animator,
+                navigationAgent,
+                hammer,
+                groundVortex,
+                spawnPoints,
+                preferredSpawnPointIndex,
+                workPoint,
+                exitPoint,
+                constructionSite);
+            hammer.SetActive(false);
+
             return worker.transform;
+        }
+
+        private static GameObject CreateConstructionGroundVortex(
+            Transform worker,
+            string workerName)
+        {
+            var vortexAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ConstructionGoblinSpawnVfxPath)
+                ?? throw new System.InvalidOperationException(
+                    "Ready-made goblin spawn VFX is missing: " + ConstructionGoblinSpawnVfxPath);
+            var effectObject = (GameObject)PrefabUtility.InstantiatePrefab(vortexAsset);
+            effectObject.name = workerName + "_GroundVortex";
+            effectObject.transform.SetParent(worker, false);
+            effectObject.transform.localPosition = new Vector3(0f, 0.025f, 0f);
+            effectObject.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+            effectObject.transform.localScale = Vector3.one * 0.85f;
+            foreach (var system in effectObject.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                var main = system.main;
+                main.playOnAwake = false;
+                system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+
+            effectObject.SetActive(false);
+            return effectObject;
+        }
+
+        private static Material LoadConstructionWorkerHitMaterial()
+        {
+            var builtInMaterial =
+                AssetDatabase.GetBuiltinExtraResource<Material>("Default-ParticleSystem.mat");
+            if (builtInMaterial != null)
+            {
+                return builtInMaterial;
+            }
+
+            throw new System.InvalidOperationException(
+                "Unity built-in particle material is unavailable.");
         }
 
         private static AnimatorController GetOrCreateConstructionWorkerController()
@@ -2266,9 +2714,13 @@ namespace HorseParking.Presentation.Editor
 
             controller.AddParameter("isWalking", AnimatorControllerParameterType.Bool);
             controller.AddParameter("isBuilding", AnimatorControllerParameterType.Bool);
+            controller.AddParameter("isEmerging", AnimatorControllerParameterType.Bool);
+            controller.AddParameter("isDisappearing", AnimatorControllerParameterType.Bool);
             controller.AddParameter("wasHit", AnimatorControllerParameterType.Trigger);
 
             var idleState = stateMachine.AddState("WorkerIdle");
+            var emergingState = stateMachine.AddState("WorkerEmerging");
+            var disappearingState = stateMachine.AddState("WorkerDisappearing");
             var walkState = stateMachine.AddState("WorkerWalk");
             var hammeringState = stateMachine.AddState("WorkerHammering");
             var hitState = stateMachine.AddState("WorkerHit");
@@ -2276,6 +2728,14 @@ namespace HorseParking.Presentation.Editor
                 ConstructionWorkerIdleAnimationPath,
                 preferredName: null,
                 loopTime: true);
+            var groundSpawnClip = GetConstructionWorkerAnimationClip(
+                ConstructionWorkerSpawnAnimationPath,
+                preferredName: "Spawn_Ground",
+                loopTime: false);
+            emergingState.motion = groundSpawnClip;
+            disappearingState.motion = groundSpawnClip;
+            disappearingState.speed = -1f;
+            disappearingState.cycleOffset = 1f;
             walkState.motion = GetConstructionWorkerAnimationClip(
                 ConstructionWorkerWalkAnimationPath,
                 preferredName: null,
@@ -2289,6 +2749,15 @@ namespace HorseParking.Presentation.Editor
                 preferredName: "Melee_Block_Hit",
                 loopTime: false);
 
+            AddWorkerTransition(idleState, emergingState, "isEmerging", expectedValue: true);
+            AddWorkerTransition(walkState, disappearingState, "isDisappearing", expectedValue: true);
+            AddWorkerTransition(idleState, disappearingState, "isDisappearing", expectedValue: true);
+            AddWorkerTransition(emergingState, walkState, "isWalking", expectedValue: true);
+            AddWorkerExitTransition(
+                disappearingState,
+                idleState,
+                "isDisappearing",
+                expectedValue: false);
             AddWorkerTransition(idleState, walkState, "isWalking", expectedValue: true);
             AddWorkerTransition(idleState, hammeringState, "isBuilding", expectedValue: true);
             AddWorkerTransition(walkState, idleState, "isWalking", expectedValue: false);
@@ -2349,26 +2818,42 @@ namespace HorseParking.Presentation.Editor
             var importer = AssetImporter.GetAtPath(path) as ModelImporter
                 ?? throw new System.InvalidOperationException(
                     "Construction worker animation is missing: " + path);
+            var importerChanged = false;
             if (importer.animationType != ModelImporterAnimationType.Human
                 || importer.avatarSetup != ModelImporterAvatarSetup.CreateFromThisModel)
             {
                 importer.animationType = ModelImporterAnimationType.Human;
                 importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+                importerChanged = true;
             }
 
-            var clips = importer.defaultClipAnimations;
+            var clips = importer.clipAnimations.Length > 0
+                ? importer.clipAnimations
+                : importer.defaultClipAnimations;
             foreach (var clip in clips)
             {
                 var isSelectedClip = string.IsNullOrEmpty(preferredName)
                     || clip.name.IndexOf(preferredName, System.StringComparison.OrdinalIgnoreCase) >= 0;
-                clip.loopTime = isSelectedClip && loopTime;
-                clip.loopPose = isSelectedClip && loopTime;
-                clip.keepOriginalPositionXZ = true;
-                clip.keepOriginalPositionY = true;
+                var shouldLoop = isSelectedClip && loopTime;
+                if (clip.loopTime != shouldLoop
+                    || clip.loopPose != shouldLoop
+                    || !clip.keepOriginalPositionXZ
+                    || !clip.keepOriginalPositionY)
+                {
+                    clip.loopTime = shouldLoop;
+                    clip.loopPose = shouldLoop;
+                    clip.keepOriginalPositionXZ = true;
+                    clip.keepOriginalPositionY = true;
+                    importerChanged = true;
+                }
             }
 
-            importer.clipAnimations = clips;
-            importer.SaveAndReimport();
+            if (importerChanged)
+            {
+                importer.clipAnimations = clips;
+                importer.SaveAndReimport();
+            }
+
             var importedClips = AssetDatabase.LoadAllAssetsAtPath(path)
                 .OfType<AnimationClip>()
                 .Where(candidate => !candidate.name.StartsWith("__preview__"))
@@ -2633,6 +3118,69 @@ namespace HorseParking.Presentation.Editor
 
                 collider.sharedMesh = meshFilter.sharedMesh;
             }
+        }
+
+        private static Transform CreateConstructionRoutePoint(
+            Transform parent,
+            string name,
+            Vector3 worldPosition,
+            Vector3 lookTargetWorld)
+        {
+            var point = new GameObject(name).transform;
+            point.SetParent(parent, true);
+            point.position = worldPosition;
+            var forward = lookTargetWorld - worldPosition;
+            forward.y = 0f;
+            point.rotation = forward.sqrMagnitude > 0.0001f
+                ? Quaternion.LookRotation(forward, Vector3.up)
+                : Quaternion.identity;
+            return point;
+        }
+
+        private static void CreateBoxNavMeshObstacle(
+            Transform parent,
+            string name,
+            Bounds worldBounds,
+            float horizontalPadding)
+        {
+            var obstacleObject = new GameObject(name, typeof(NavMeshObstacle));
+            obstacleObject.transform.SetParent(parent, true);
+            obstacleObject.transform.position = worldBounds.center;
+            obstacleObject.transform.rotation = Quaternion.identity;
+            var parentScale = parent.lossyScale;
+            obstacleObject.transform.localScale = new Vector3(
+                Mathf.Abs(parentScale.x) > 0.0001f ? 1f / parentScale.x : 1f,
+                Mathf.Abs(parentScale.y) > 0.0001f ? 1f / parentScale.y : 1f,
+                Mathf.Abs(parentScale.z) > 0.0001f ? 1f / parentScale.z : 1f);
+
+            var obstacle = obstacleObject.GetComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Box;
+            obstacle.center = Vector3.zero;
+            obstacle.size = new Vector3(
+                worldBounds.size.x + horizontalPadding * 2f,
+                Mathf.Max(0.8f, worldBounds.size.y),
+                worldBounds.size.z + horizontalPadding * 2f);
+            obstacle.carving = true;
+            obstacle.carveOnlyStationary = true;
+        }
+
+        private static void RebuildConstructionWorkerNavigation()
+        {
+            var previous = GameObject.Find("Navigation_ConstructionWorkers");
+            if (previous != null)
+            {
+                Object.DestroyImmediate(previous);
+            }
+
+            var navigationRoot = new GameObject(
+                "Navigation_ConstructionWorkers",
+                typeof(NavMeshSurface));
+            var surface = navigationRoot.GetComponent<NavMeshSurface>();
+            surface.agentTypeID = 0;
+            surface.collectObjects = CollectObjects.All;
+            surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+            surface.layerMask = ~0;
+            surface.BuildNavMesh();
         }
 
         private static void AddGroundCollider(GameObject root)

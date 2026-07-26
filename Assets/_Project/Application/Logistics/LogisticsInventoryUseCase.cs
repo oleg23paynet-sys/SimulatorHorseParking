@@ -97,6 +97,7 @@ namespace HorseParking.Application.Logistics
 
         public event Action? CartInventoryChanged;
         public event Action? WarehouseInventoryChanged;
+        public event Action? GoldChanged;
 
         public LogisticsInventoryUseCase(
             ResourceCatalog resourceCatalog,
@@ -116,6 +117,18 @@ namespace HorseParking.Application.Logistics
         public string WarehouseId => warehouse.Id;
         public string CartId => cart.Id;
         public int Gold => gold;
+
+        /// <summary>
+        /// Credits earned gold to the single shared player balance. Parking and future
+        /// income sources use this boundary instead of keeping Presentation-only money.
+        /// </summary>
+        public int AddGold(int amount)
+        {
+            if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount));
+            gold = checked(gold + amount);
+            GoldChanged?.Invoke();
+            return gold;
+        }
 
         public IReadOnlyList<StoreOfferSnapshot> GetStoreOffers()
         {
@@ -272,6 +285,7 @@ namespace HorseParking.Application.Logistics
 
             gold -= totalPrice;
             CartInventoryChanged?.Invoke();
+            GoldChanged?.Invoke();
             return PurchaseResult.Success(gold);
         }
 

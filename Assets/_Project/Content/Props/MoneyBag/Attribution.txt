@@ -1,0 +1,6 @@
+LowPoly Stylized Money Bag
+Author: cat is activated
+Source: https://sketchfab.com/3d-models/lowpoly-stylized-money-bag-053f500bd16f4c5e98513a50e6186179
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+License URL: https://creativecommons.org/licenses/by/4.0/
+Project changes: renamed, rescaled, and materials adapted for Unity URP.

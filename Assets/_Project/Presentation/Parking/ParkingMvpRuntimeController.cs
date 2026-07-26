@@ -104,6 +104,15 @@ namespace HorseParking.Presentation.Parking
 
             collectedGold = payment.Gold;
             paymentCollected = true;
+            if (compositionRoot.HasLogisticsInventory)
+            {
+                compositionRoot.LogisticsInventoryUseCase.AddGold(payment.Gold);
+            }
+            else
+            {
+                Debug.LogError("Parking payment was collected, but the shared gold balance is not configured.", this);
+            }
+
             paymentSackVisual.SetActive(false);
             Debug.Log("Parking: collected " + payment.Gold + " gold. Go to the exit gate and left-click it.");
             return true;
@@ -156,10 +165,10 @@ namespace HorseParking.Presentation.Parking
                 return;
             }
 
-            // Preserve the sack's world scale when parenting under the scaled FBX rig.
-            paymentSackVisual.transform.SetParent(paymentBagAnchor, true);
-            paymentSackVisual.transform.position = paymentBagAnchor.position;
-            paymentSackVisual.transform.rotation = paymentBagAnchor.rotation;
+            paymentSackVisual.transform.SetParent(paymentBagAnchor, false);
+            paymentSackVisual.transform.localPosition = Vector3.zero;
+            paymentSackVisual.transform.localRotation = Quaternion.identity;
+            paymentSackVisual.transform.localScale = Vector3.one;
             paymentSackVisual.SetActive(true);
             Debug.Log("Parking: payment bag is at the horse. Look at it and left-click.");
         }

@@ -1,7 +1,10 @@
 {
   "name": "HorseParking.Presentation.Editor",
   "rootNamespace": "HorseParking.Presentation.Editor",
-  "references": ["HorseParking.Presentation"],
+  "references": [
+    "HorseParking.Presentation",
+    "Unity.AI.Navigation"
+  ],
   "includePlatforms": ["Editor"],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

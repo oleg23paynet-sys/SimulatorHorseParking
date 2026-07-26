@@ -96,6 +96,8 @@ namespace HorseParking.Application.Construction
     /// </summary>
     public sealed class ConstructionRequirementsUseCase
     {
+        private const double BuildSpeedPerActiveWorker = 2d;
+
         private readonly ConstructionProject project;
         private readonly LogisticsInventoryUseCase inventoryUseCase;
         private double constructionSpeedMultiplier = 1d;
@@ -192,10 +194,18 @@ namespace HorseParking.Application.Construction
             return ConstructionStartResult.Success();
         }
 
-        public void AdvanceConstruction(double deltaSeconds)
+        /// <summary>
+        /// Advances construction once per frame from the number of workers that are
+        /// actually at their work points. One worker contributes twice the old shared
+        /// baseline; additional workers scale the contribution proportionally.
+        /// </summary>
+        public void AdvanceConstruction(double deltaSeconds, int activeWorkerCount)
         {
+            if (deltaSeconds <= 0d || activeWorkerCount <= 0) return;
+
             var wasCompleted = project.State == ConstructionState.Completed;
-            if (!project.Advance(deltaSeconds * constructionSpeedMultiplier)) return;
+            var workerContribution = activeWorkerCount * BuildSpeedPerActiveWorker;
+            if (!project.Advance(deltaSeconds * workerContribution * constructionSpeedMultiplier)) return;
 
             ConstructionProgressChanged?.Invoke();
             if (!wasCompleted && project.State == ConstructionState.Completed)

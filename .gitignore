@@ -109,7 +109,21 @@ Assets/Goblin/Textures/T_gobsredskin_*
 # curated FBX files under ConstructionWorkers.
 Assets/ExplosiveLLC/
 Assets/ExplosiveLLC.meta
+Assets/GabrielAguiarProductions/
+Assets/GabrielAguiarProductions.meta
+
+# Superseded Portal texture remnants; Stage 3.6 uses the isolated Tornado VFX.
+Assets/_Project/Content/VFX/GoblinSpawn/Textures/Circle01_v1.png
+Assets/_Project/Content/VFX/GoblinSpawn/Textures/Circle01_v1.png.meta
+Assets/_Project/Content/VFX/GoblinSpawn/Textures/Flare00.PNG
+Assets/_Project/Content/VFX/GoblinSpawn/Textures/Flare00.PNG.meta
 Assets/_Project/Content/Animations/Characters/KayKit_Character_Animations_1.1/
 Assets/_Project/Content/Animations/Characters/KayKit_Character_Animations_1.1.meta
 Assets/_Project/Content/Animations/Characters/ConstructionWorkers/Worker_Hammering.fbx*
 Assets/_Project/Content/Animations/Characters/ConstructionWorkers/Worker_Hammering_Return.fbx*
+
+# PrimeTween is installed as a local Unity package from Packages/. The Asset
+# Store installer and demo under Assets/Plugins are local bootstrap content only.
+Assets/Plugins/PrimeTween/
+Assets/Plugins/PrimeTween.meta
+Assets/Plugins.meta
