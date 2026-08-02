@@ -7,6 +7,7 @@ using HorseParking.Presentation.Logistics;
 using HorseParking.Presentation.Localization;
 using HorseParking.Presentation.Player;
 using HorseParking.Presentation.Parking;
+using HorseParking.Presentation.WorldEvents;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
@@ -30,6 +31,7 @@ namespace HorseParking.Presentation.Editor
         private const string ParkingEconomySettingsPath = "Assets/_Project/Settings/ParkingEconomySettings.asset";
         private const string ParkingClientArchetypeSettingsPath = "Assets/_Project/Settings/ParkingClientArchetypeSettings.asset";
         private const string ParkingClientDialogueSettingsPath = "Assets/_Project/Settings/ParkingClientDialogueSettings.asset";
+        private const string LivingWorldEventSettingsPath = "Assets/_Project/Settings/LivingWorldEventSettings.asset";
         private const string ConstructionSignModelPath = "Assets/_Project/Content/Models/Props/ConstructionSign/SM_ConstructionSign.fbx";
         private const string ConstructionSignTexturePath = "Assets/_Project/Content/Models/Props/ConstructionSign/Textures/T_ConstructionSign_BaseColor.jpeg";
         private const string ConstructionSignMaterialPath = "Assets/_Project/Content/Models/Props/ConstructionSign/Materials/M_ConstructionSign.mat";
@@ -132,12 +134,14 @@ namespace HorseParking.Presentation.Editor
             EnsureStage4Translations(LoadOrCreateGameLocalizationSettings());
             EnsureStage51Translations(LoadOrCreateGameLocalizationSettings());
             EnsureStage52Translations(LoadOrCreateGameLocalizationSettings());
+            EnsureStage53Translations(LoadOrCreateGameLocalizationSettings());
             compositionRoot.ConfigureLogisticsInventory(LoadOrCreateLogisticsInventorySettings());
             compositionRoot.ConfigureLocalization(LoadOrCreateGameLocalizationSettings());
             compositionRoot.ConfigureConstructionRequirements(LoadOrCreateConstructionRequirementsSettings());
             compositionRoot.ConfigureParkingEconomy(LoadOrCreateParkingEconomySettings());
             compositionRoot.ConfigureParkingClientArchetypes(LoadOrCreateParkingClientArchetypeSettings());
             compositionRoot.ConfigureParkingClientDialogue(LoadOrCreateParkingClientDialogueSettings());
+            compositionRoot.ConfigureLivingWorldEvents(LoadOrCreateLivingWorldEventSettings());
             var playerController = CreatePlayer(compositionRoot);
             CreateLogisticsInventoryHud(compositionRoot);
             CreateParkingEconomyHud(compositionRoot, playerController);
@@ -171,6 +175,12 @@ namespace HorseParking.Presentation.Editor
                 ?? throw new System.InvalidOperationException("ParkingMvpRuntime was not created."),
                 riderRoot,
                 LoadOrCreateParkingClientDialogueSettings());
+            CreateLivingWorldEventHud(
+                compositionRoot,
+                Object.FindAnyObjectByType<ParkingMvpRuntimeController>()
+                ?? throw new System.InvalidOperationException("ParkingMvpRuntime was not created."),
+                playerController,
+                riderRoot);
             var operationsBuildings = CreateOperationsBuildings();
             CreateStage32Logistics(
                 compositionRoot,
@@ -275,6 +285,35 @@ namespace HorseParking.Presentation.Editor
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
             Debug.Log("Stage 5.2 localized NPC dialogue and reactions were installed in " + ScenePath);
+        }
+
+        [MenuItem("Horse Parking/Install Stage 5.3 Royal Inspection")]
+        public static void InstallStage53RoyalInspection()
+        {
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            var compositionRoot = Object.FindAnyObjectByType<GameCompositionRoot>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing GameCompositionRoot.");
+            var runtime = Object.FindAnyObjectByType<ParkingMvpRuntimeController>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing ParkingMvpRuntimeController.");
+            var playerController = Object.FindAnyObjectByType<FirstPersonPlayerController>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing FirstPersonPlayerController.");
+            var riderRoot = GameObject.Find("ClientRider_01")?.transform
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing ClientRider_01.");
+            var eventSettings = LoadOrCreateLivingWorldEventSettings();
+            var localizationSettings = LoadOrCreateGameLocalizationSettings();
+
+            EnsureStage53Translations(localizationSettings);
+            compositionRoot.ConfigureLocalization(localizationSettings);
+            compositionRoot.ConfigureLivingWorldEvents(eventSettings);
+            CreateLivingWorldEventHud(compositionRoot, runtime, playerController, riderRoot);
+
+            EditorUtility.SetDirty(compositionRoot);
+            EditorUtility.SetDirty(eventSettings);
+            EditorUtility.SetDirty(localizationSettings);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Stage 5.3 royal inspection event was installed in " + ScenePath);
         }
 
         [MenuItem("Horse Parking/Install Stage 3.1 Inventory")]
@@ -3443,6 +3482,47 @@ namespace HorseParking.Presentation.Editor
             EditorUtility.SetDirty(settings);
         }
 
+        private static void EnsureStage53Translations(GameLocalizationSettings settings)
+        {
+            var entries = new[]
+            {
+                ("ru", "interaction.world_event.review", "Пройти королевскую проверку"),
+                ("ru", "interaction.world_event.opened", "Открыта королевская проверка"),
+                ("ru", "event.royal_inspection.title", "КОРОЛЕВСКАЯ ПРОВЕРКА"),
+                ("ru", "event.royal_inspection.description", "Инспектор требует оформить парковку по Указу №404. Можно заплатить официальный сбор или доказать, что лошадь числится сотрудником парковки."),
+                ("ru", "event.royal_inspection.option.pay", "Заплатить официальный сбор — 12 золота"),
+                ("ru", "event.royal_inspection.option.stable_excuse", "Показать лошадь в штатном расписании — награда 8 или штраф 6"),
+                ("ru", "event.royal_inspection.outcome.paid", "Сбор принят. Инспектор поставил печать прямо на шлагбаум."),
+                ("ru", "event.royal_inspection.outcome.excuse_success", "Инспектор признал лошадь ценным сотрудником и выдал субсидию на овёс."),
+                ("ru", "event.royal_inspection.outcome.excuse_failed", "Инспектор заметил, что лошадь не подписала трудовой договор, и выписал штраф."),
+                ("ru", "ui.world_event.choose", "Выберите ответ. Событие необязательное — окно можно закрыть."),
+                ("ru", "ui.world_event.outcome", "{outcome}\nИзменение золота: {gold}"),
+                ("ru", "event.notice.insufficient_gold", "Недостаточно золота для этого решения. Выберите другой ответ или вернитесь позже."),
+                ("ru", "event.notice.unavailable", "Это событие сейчас недоступно."),
+                ("ru", "economy.world_event", "Событие живого мира"),
+
+                ("en", "interaction.world_event.review", "Handle royal inspection"),
+                ("en", "interaction.world_event.opened", "Royal inspection opened"),
+                ("en", "event.royal_inspection.title", "ROYAL INSPECTION"),
+                ("en", "event.royal_inspection.description", "The inspector demands registration under Decree 404. Pay the official duty or prove that the horse is a parking employee."),
+                ("en", "event.royal_inspection.option.pay", "Pay the official duty — 12 gold"),
+                ("en", "event.royal_inspection.option.stable_excuse", "Show the horse on payroll — reward 8 or fine 6"),
+                ("en", "event.royal_inspection.outcome.paid", "Duty accepted. The inspector stamped the barrier itself."),
+                ("en", "event.royal_inspection.outcome.excuse_success", "The inspector recognized the horse as valuable staff and granted an oat subsidy."),
+                ("en", "event.royal_inspection.outcome.excuse_failed", "The inspector noticed that the horse never signed its contract and issued a fine."),
+                ("en", "ui.world_event.choose", "Choose a response. This event is optional — you may close the window."),
+                ("en", "ui.world_event.outcome", "{outcome}\nGold change: {gold}"),
+                ("en", "event.notice.insufficient_gold", "Not enough gold for this response. Choose another option or return later."),
+                ("en", "event.notice.unavailable", "This event is currently unavailable."),
+                ("en", "economy.world_event", "Living-world event")
+            };
+
+            foreach (var entry in entries)
+                settings.EnsureTranslation(entry.Item1, entry.Item2, entry.Item3);
+
+            EditorUtility.SetDirty(settings);
+        }
+
         private static void EnsureStage35Translations(GameLocalizationSettings settings)
         {
             var entries = new[]
@@ -3796,6 +3876,27 @@ namespace HorseParking.Presentation.Editor
                 settings = ScriptableObject.CreateInstance<ParkingClientDialogueSettings>();
                 settings.EnsureDemoDefaults();
                 AssetDatabase.CreateAsset(settings, ParkingClientDialogueSettingsPath);
+            }
+            else
+            {
+                settings.EnsureDemoDefaults();
+            }
+
+            EditorUtility.SetDirty(settings);
+            AssetDatabase.SaveAssets();
+            return settings;
+        }
+
+        private static LivingWorldEventSettings LoadOrCreateLivingWorldEventSettings()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<LivingWorldEventSettings>(
+                LivingWorldEventSettingsPath);
+            if (settings == null)
+            {
+                EnsureFolder("Assets/_Project/Settings");
+                settings = ScriptableObject.CreateInstance<LivingWorldEventSettings>();
+                settings.EnsureDemoDefaults();
+                AssetDatabase.CreateAsset(settings, LivingWorldEventSettingsPath);
             }
             else
             {
@@ -4245,6 +4346,132 @@ namespace HorseParking.Presentation.Editor
                 speaker,
                 reaction,
                 line);
+        }
+
+        private static void CreateLivingWorldEventHud(
+            GameCompositionRoot compositionRoot,
+            ParkingMvpRuntimeController runtime,
+            FirstPersonPlayerController playerController,
+            Transform riderRoot)
+        {
+            var existing = GameObject.Find("LivingWorldEventHUD");
+            if (existing != null)
+                Object.DestroyImmediate(existing);
+
+            var canvasObject = new GameObject(
+                "LivingWorldEventHUD",
+                typeof(Canvas),
+                typeof(CanvasScaler),
+                typeof(GraphicRaycaster));
+            var canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 30;
+
+            var scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1280f, 720f);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.5f;
+
+            var panelObject = new GameObject(
+                "RoyalInspectionPanel",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            panelObject.transform.SetParent(canvasObject.transform, false);
+            var panelRect = panelObject.GetComponent<RectTransform>();
+            panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.anchoredPosition = Vector2.zero;
+            panelRect.sizeDelta = new Vector2(760f, 500f);
+            panelObject.GetComponent<Image>().color = new Color(0.045f, 0.027f, 0.015f, 0.98f);
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var title = CreateCentredText(
+                panelObject.transform,
+                "EventTitle",
+                font,
+                32,
+                new Vector2(0f, 205f),
+                new Vector2(690f, 52f));
+            title.fontStyle = FontStyle.Bold;
+            title.color = new Color(1f, 0.79f, 0.31f, 1f);
+
+            var description = CreateCentredText(
+                panelObject.transform,
+                "EventDescription",
+                font,
+                24,
+                new Vector2(0f, 125f),
+                new Vector2(680f, 100f));
+            description.horizontalOverflow = HorizontalWrapMode.Wrap;
+            description.verticalOverflow = VerticalWrapMode.Truncate;
+            description.resizeTextForBestFit = true;
+            description.resizeTextMinSize = 18;
+            description.resizeTextMaxSize = 24;
+
+            var outcome = CreateCentredText(
+                panelObject.transform,
+                "EventOutcome",
+                font,
+                22,
+                new Vector2(0f, 45f),
+                new Vector2(680f, 62f));
+            outcome.horizontalOverflow = HorizontalWrapMode.Wrap;
+            outcome.resizeTextForBestFit = true;
+            outcome.resizeTextMinSize = 17;
+            outcome.resizeTextMaxSize = 22;
+
+            var firstOption = CreateUiButton(
+                panelObject.transform,
+                "EventOption_01",
+                font,
+                new Vector2(0f, -45f),
+                new Vector2(660f, 68f));
+            var secondOption = CreateUiButton(
+                panelObject.transform,
+                "EventOption_02",
+                font,
+                new Vector2(0f, -125f),
+                new Vector2(660f, 68f));
+            foreach (var optionLabel in new[] { firstOption.label, secondOption.label })
+            {
+                optionLabel.fontSize = 23;
+                optionLabel.resizeTextForBestFit = true;
+                optionLabel.resizeTextMinSize = 16;
+                optionLabel.resizeTextMaxSize = 23;
+                optionLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
+                optionLabel.verticalOverflow = VerticalWrapMode.Truncate;
+            }
+
+            var close = CreateUiButton(
+                panelObject.transform,
+                "CloseEvent",
+                font,
+                new Vector2(0f, -210f),
+                new Vector2(260f, 52f));
+            close.label.fontSize = 22;
+
+            var presenter = canvasObject.AddComponent<LivingWorldEventPresenter>();
+            presenter.Configure(
+                compositionRoot,
+                runtime,
+                playerController,
+                panelObject,
+                title,
+                description,
+                outcome,
+                firstOption.button,
+                firstOption.label,
+                secondOption.button,
+                secondOption.label,
+                close.button,
+                close.label);
+            panelObject.SetActive(false);
+
+            var interactionZone = FindDescendant(riderRoot, "ClientDialogueInteractionZone")
+                ?? throw new System.InvalidOperationException(
+                    "ParkingMvp is missing ClientDialogueInteractionZone for Stage 5.3.");
+            interactionZone.GetComponent<ParkingClientInteractionTarget>().Configure(runtime, presenter);
         }
 
         private static void ConfigureDialogueTextRect(

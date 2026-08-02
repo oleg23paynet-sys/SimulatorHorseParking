@@ -33,6 +33,7 @@ namespace HorseParking.Presentation.Parking
         private double nextClientArrivalAtSeconds;
         private bool waitingForNextClient;
         private ParkingClientArchetype? currentArchetype;
+        private int currentClientSequence;
 
         public bool CanCollectPayment => initialized && paymentRequested && !paymentCollected;
 
@@ -45,6 +46,7 @@ namespace HorseParking.Presentation.Parking
             && currentArchetype != null
             && clientVisual.activeInHierarchy;
         public ParkingClientArchetype? CurrentArchetype => currentArchetype;
+        public int CurrentClientSequence => currentClientSequence;
         public event Action<ParkingClientArchetype>? ClientArchetypeChanged;
         public event Action<ParkingClientArchetype, ParkingClientDialogueMoment>? ClientDialogueRequested;
 
@@ -247,6 +249,7 @@ namespace HorseParking.Presentation.Parking
             }
 
             currentArchetype = compositionRoot.ParkingClientArchetypeSelectionUseCase.SelectNext();
+            currentClientSequence++;
             ClientArchetypeChanged?.Invoke(currentArchetype);
         }
 

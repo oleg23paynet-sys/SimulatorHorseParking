@@ -6,6 +6,7 @@ using HorseParking.Application.Economy;
 using HorseParking.Application.Interaction;
 using HorseParking.Application.Logistics;
 using HorseParking.Application.Parking;
+using HorseParking.Application.WorldEvents;
 using HorseParking.Core.Localization;
 using HorseParking.Core.Parking;
 using HorseParking.Core.Randomness;
@@ -18,6 +19,7 @@ using HorseParking.Presentation.Construction;
 using HorseParking.Presentation.Economy;
 using HorseParking.Presentation.Localization;
 using HorseParking.Presentation.Parking;
+using HorseParking.Presentation.WorldEvents;
 using UnityEngine;
 
 namespace HorseParking.Presentation.Composition
@@ -39,6 +41,7 @@ namespace HorseParking.Presentation.Composition
         private ParkingEconomyUseCase? parkingEconomyUseCase;
         private ParkingClientArchetypeSelectionUseCase? parkingClientArchetypeSelectionUseCase;
         private ParkingClientDialogueUseCase? parkingClientDialogueUseCase;
+        private LivingWorldEventUseCase? livingWorldEventUseCase;
 
         [SerializeField] private LogisticsInventorySettings? logisticsInventorySettings;
         [SerializeField] private GameLocalizationSettings? localizationSettings;
@@ -46,6 +49,7 @@ namespace HorseParking.Presentation.Composition
         [SerializeField] private ParkingEconomySettings? parkingEconomySettings;
         [SerializeField] private ParkingClientArchetypeSettings? parkingClientArchetypeSettings;
         [SerializeField] private ParkingClientDialogueSettings? parkingClientDialogueSettings;
+        [SerializeField] private LivingWorldEventSettings? livingWorldEventSettings;
 
         public ILocalizationService LocalizationService => localizationService;
 
@@ -93,6 +97,11 @@ namespace HorseParking.Presentation.Composition
             parkingClientDialogueUseCase
             ?? throw new System.InvalidOperationException("Parking client dialogue is not configured.");
 
+        public bool HasLivingWorldEvents => livingWorldEventUseCase != null;
+
+        public LivingWorldEventUseCase LivingWorldEventUseCase => livingWorldEventUseCase
+            ?? throw new System.InvalidOperationException("Living-world events are not configured.");
+
         public void ConfigureLogisticsInventory(LogisticsInventorySettings settings)
         {
             logisticsInventorySettings = settings;
@@ -121,6 +130,11 @@ namespace HorseParking.Presentation.Composition
         public void ConfigureParkingClientDialogue(ParkingClientDialogueSettings settings)
         {
             parkingClientDialogueSettings = settings;
+        }
+
+        public void ConfigureLivingWorldEvents(LivingWorldEventSettings settings)
+        {
+            livingWorldEventSettings = settings;
         }
 
         private void Awake()
@@ -158,6 +172,9 @@ namespace HorseParking.Presentation.Composition
                 parkingEconomyUseCase = parkingEconomySettings != null
                     ? parkingEconomySettings.CreateUseCase(logisticsInventoryUseCase)
                     : null;
+                livingWorldEventUseCase = livingWorldEventSettings != null
+                    ? livingWorldEventSettings.CreateUseCase(logisticsInventoryUseCase, randomSource)
+                    : null;
             }
             else
             {
@@ -165,6 +182,7 @@ namespace HorseParking.Presentation.Composition
                 cartJourneyUseCase = null;
                 constructionRequirementsUseCase = null;
                 parkingEconomyUseCase = null;
+                livingWorldEventUseCase = null;
             }
         }
     }

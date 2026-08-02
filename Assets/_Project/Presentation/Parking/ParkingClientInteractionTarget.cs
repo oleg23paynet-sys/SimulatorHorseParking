@@ -2,6 +2,7 @@
 
 using HorseParking.Core.Interaction;
 using HorseParking.Core.Localization;
+using HorseParking.Presentation.WorldEvents;
 using UnityEngine;
 
 namespace HorseParking.Presentation.Parking
@@ -11,6 +12,7 @@ namespace HorseParking.Presentation.Parking
     public sealed class ParkingClientInteractionTarget : MonoBehaviour, IInteractionTarget
     {
         [SerializeField] private ParkingMvpRuntimeController runtimeController = null!;
+        [SerializeField] private LivingWorldEventPresenter? worldEventPresenter;
 
         public string Id => "parking-client-dialogue";
 
@@ -20,18 +22,27 @@ namespace HorseParking.Presentation.Parking
                 : InteractionAvailability.Unavailable;
 
         public InteractionPrompt Prompt => new InteractionPrompt(
-            new LocalizationKey("interaction.client.talk"),
+            new LocalizationKey(
+                worldEventPresenter != null && worldEventPresenter.CanOpenForCurrentClient
+                    ? "interaction.world_event.review"
+                    : "interaction.client.talk"),
             runtimeController != null && runtimeController.CurrentArchetype != null
                 ? runtimeController.CurrentArchetype.NameKey
                 : new LocalizationKey("interaction.client.target"));
 
-        public void Configure(ParkingMvpRuntimeController runtime)
+        public void Configure(
+            ParkingMvpRuntimeController runtime,
+            LivingWorldEventPresenter? eventPresenter = null)
         {
             runtimeController = runtime;
+            worldEventPresenter = eventPresenter;
         }
 
         public InteractionResult Interact()
         {
+            if (worldEventPresenter != null && worldEventPresenter.TryOpenForCurrentClient())
+                return InteractionResult.Success(new LocalizationKey("interaction.world_event.opened"));
+
             return runtimeController != null && runtimeController.TryTalkToClient()
                 ? InteractionResult.Success(new LocalizationKey("interaction.client.spoke"))
                 : InteractionResult.Failure(new LocalizationKey("interaction.unavailable"));
