@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad163b418a765ca41854d703d34122fd, type: 3}
+  m_Name: ParkingClientArchetypeSettings
+  m_EditorClassIdentifier: HorseParking.Presentation::HorseParking.Presentation.Parking.ParkingClientArchetypeSettings
+  definitions:
+  - id: traveler
+    nameKey: client.archetype.traveler
+    descriptionKey: client.archetype.traveler.description
+    parkingDurationSeconds: 5
+    billingPeriodSeconds: 20
+    goldPerPeriod: 3
+    temperament: 0
+  - id: merchant
+    nameKey: client.archetype.merchant
+    descriptionKey: client.archetype.merchant.description
+    parkingDurationSeconds: 8
+    billingPeriodSeconds: 20
+    goldPerPeriod: 5
+    temperament: 1
+  - id: royal_inspector
+    nameKey: client.archetype.royal_inspector
+    descriptionKey: client.archetype.royal_inspector.description
+    parkingDurationSeconds: 12
+    billingPeriodSeconds: 15
+    goldPerPeriod: 7
+    temperament: 2
+  delayBetweenClientsSeconds: 3

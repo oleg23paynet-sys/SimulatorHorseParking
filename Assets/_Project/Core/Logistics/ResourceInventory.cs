@@ -79,9 +79,19 @@ namespace HorseParking.Core.Logistics
         }
 
         public string Id { get; }
-        public int CapacityUnits { get; }
+        public int CapacityUnits { get; private set; }
         public int UsedCapacityUnits { get; private set; }
         public int AvailableCapacityUnits => CapacityUnits - UsedCapacityUnits;
+
+        public void IncreaseCapacity(int additionalCapacityUnits)
+        {
+            if (additionalCapacityUnits <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(additionalCapacityUnits));
+            }
+
+            CapacityUnits = checked(CapacityUnits + additionalCapacityUnits);
+        }
 
         public int GetQuantity(ResourceId resourceId)
         {

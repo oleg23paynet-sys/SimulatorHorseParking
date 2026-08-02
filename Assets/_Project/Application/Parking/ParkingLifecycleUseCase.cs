@@ -19,6 +19,8 @@ namespace HorseParking.Application.Parking
         public bool TryPark(string clientId) => slot.TryPark(clientId, clock.ElapsedSeconds);
         public bool TryRequestPayment() => slot.TryRequestPayment();
         public bool TryCollectPayment(out ParkingPayment payment) => slot.TryCollectPayment(clock.ElapsedSeconds, tariff, out payment);
+        public bool TryCollectPayment(ParkingTariff clientTariff, out ParkingPayment payment) =>
+            slot.TryCollectPayment(clock.ElapsedSeconds, clientTariff, out payment);
         public bool TryReleaseClient() => slot.TryRelease();
     }
 }

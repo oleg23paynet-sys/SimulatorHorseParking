@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9efa8c9b9f00b44aad09ebda376044d, type: 3}
+  m_Name: ParkingEconomySettings
+  m_EditorClassIdentifier: HorseParking.Presentation::HorseParking.Presentation.Economy.ParkingEconomySettings
+  billingPeriodSeconds: 20
+  goldPerBillingPeriod: 3
+  expenseIntervalSeconds: 180
+  driverSalary: 8
+  royalTribute: 12
+  maximumUpgradeLevel: 3
+  cartCapacityBaseCost: 30
+  cartCapacityCostStep: 20
+  cartCapacityPerLevel: 8
+  cartSpeedBaseCost: 40
+  cartSpeedCostStep: 25
+  cartSpeedPerLevel: 0.2
+  constructionSpeedBaseCost: 35
+  constructionSpeedCostStep: 25
+  constructionSpeedPerLevel: 0.25

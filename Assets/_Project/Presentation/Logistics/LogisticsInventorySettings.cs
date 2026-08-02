@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using HorseParking.Application.Logistics;
+using HorseParking.Core.Economy;
 using HorseParking.Core.Localization;
 using HorseParking.Core.Logistics;
 using UnityEngine;
@@ -112,7 +113,7 @@ namespace HorseParking.Presentation.Logistics
                 warehouse,
                 cart,
                 storePrices,
-                EffectiveStartingGold);
+                new GoldWallet(EffectiveStartingGold));
             journeyUseCase = new CartJourneyUseCase(
                 cart,
                 new[] { materialStore });

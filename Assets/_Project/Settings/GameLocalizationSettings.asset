@@ -553,3 +553,446 @@ MonoBehaviour:
   - locale: en
     key: ui.construction.status.choose
     text: Materials are ready. Select a building to preview it.
+  - locale: ru
+    key: ui.economy.summary
+    text: "\u0423\u041F\u0420\u0410\u0412\u041B\u0415\u041D\u0418\u0415 \u041F\u0410\u0420\u041A\u041E\u0412\u041A\u041E\u0419\n\u0417\u043E\u043B\u043E\u0442\u043E:
+      {gold}   \u2022   \u0440\u0430\u0441\u0445\u043E\u0434\u044B \u0447\u0435\u0440\u0435\u0437
+      {seconds} \u0441\n\u0417\u0430\u0440\u043F\u043B\u0430\u0442\u0430: {salary}  
+      \u2022   \u0434\u0430\u043D\u044C \u043A\u043E\u0440\u043E\u043B\u044E: {tribute}"
+  - locale: ru
+    key: ui.economy.last_operation
+    text: "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u044F\u044F \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u044F:
+      {operation} {amount}"
+  - locale: ru
+    key: ui.economy.ready
+    text: "\u0414\u043E\u0445\u043E\u0434\u044B \u0438 \u0440\u0430\u0441\u0445\u043E\u0434\u044B
+      \u043F\u0440\u043E\u0445\u043E\u0434\u044F\u0442 \u0447\u0435\u0440\u0435\u0437
+      \u0435\u0434\u0438\u043D\u044B\u0439 \u043A\u043E\u0448\u0435\u043B\u0451\u043A."
+  - locale: ru
+    key: ui.economy.upgrade.buy
+    text: "{upgrade} ({effect})\n\u0423\u0440\u043E\u0432\u0435\u043D\u044C {level}
+      \u2192 {nextLevel}   \u2022   \u0426\u0435\u043D\u0430: {cost} \u0437\u043E\u043B\u043E\u0442\u0430"
+  - locale: ru
+    key: ui.economy.upgrade.maximum
+    text: "{upgrade} ({effect})\n\u0423\u0440\u043E\u0432\u0435\u043D\u044C {level}
+      \u2014 \u041C\u0410\u041A\u0421\u0418\u041C\u0423\u041C"
+  - locale: ru
+    key: economy.income.parking
+    text: "\u0414\u043E\u0445\u043E\u0434 \u043E\u0442 \u043F\u0430\u0440\u043A\u043E\u0432\u043A\u0438"
+  - locale: ru
+    key: economy.expense.materials
+    text: "\u041F\u043E\u043A\u0443\u043F\u043A\u0430 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B\u043E\u0432"
+  - locale: ru
+    key: economy.expense.driver_salary
+    text: "\u0417\u0430\u0440\u043F\u043B\u0430\u0442\u0430 \u0432\u043E\u0437\u043D\u0438\u0446\u044B"
+  - locale: ru
+    key: economy.expense.royal_tribute
+    text: "\u0414\u0430\u043D\u044C \u043A\u043E\u0440\u043E\u043B\u044E"
+  - locale: ru
+    key: economy.upgrade.cart_capacity
+    text: "\u0412\u043C\u0435\u0441\u0442\u0438\u043C\u043E\u0441\u0442\u044C \u0442\u0435\u043B\u0435\u0433\u0438"
+  - locale: ru
+    key: economy.upgrade.cart_speed
+    text: "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0442\u0435\u043B\u0435\u0433\u0438"
+  - locale: ru
+    key: economy.upgrade.construction_speed
+    text: "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0441\u0442\u0440\u043E\u0438\u0442\u0435\u043B\u044C\u0441\u0442\u0432\u0430"
+  - locale: ru
+    key: economy.notice.expense_unpaid
+    text: "\u0412\u043D\u0438\u043C\u0430\u043D\u0438\u0435: \u0437\u043E\u043B\u043E\u0442\u0430
+      \u043D\u0435 \u0445\u0432\u0430\u0442\u0438\u043B\u043E \u043D\u0430 \u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0439
+      \u0440\u0430\u0441\u0445\u043E\u0434. \u0411\u0430\u043B\u0430\u043D\u0441
+      \u043D\u0435 \u0443\u0448\u0451\u043B \u0432 \u043C\u0438\u043D\u0443\u0441."
+  - locale: ru
+    key: economy.notice.upgrade_insufficient_gold
+    text: "\u041D\u0435\u0434\u043E\u0441\u0442\u0430\u0442\u043E\u0447\u043D\u043E
+      \u0437\u043E\u043B\u043E\u0442\u0430 \u0434\u043B\u044F \u0443\u043B\u0443\u0447\u0448\u0435\u043D\u0438\u044F."
+  - locale: ru
+    key: economy.notice.maximum_level
+    text: "\u0423\u043B\u0443\u0447\u0448\u0435\u043D\u0438\u0435 \u0443\u0436\u0435
+      \u0434\u043E\u0441\u0442\u0438\u0433\u043B\u043E \u043C\u0430\u043A\u0441\u0438\u043C\u0430\u043B\u044C\u043D\u043E\u0433\u043E
+      \u0443\u0440\u043E\u0432\u043D\u044F."
+  - locale: en
+    key: ui.economy.summary
+    text: "PARKING MANAGEMENT\nGold: {gold}   \u2022   expenses in {seconds}s\nDriver
+      salary: {salary}   \u2022   royal tribute: {tribute}"
+  - locale: en
+    key: ui.economy.last_operation
+    text: 'Last operation: {operation} {amount}'
+  - locale: en
+    key: ui.economy.ready
+    text: Income and expenses use one shared wallet.
+  - locale: en
+    key: ui.economy.upgrade.buy
+    text: "{upgrade} ({effect})\nLevel {level} \u2192 {nextLevel}   \u2022   Cost:
+      {cost} gold"
+  - locale: en
+    key: ui.economy.upgrade.maximum
+    text: "{upgrade} ({effect})\nLevel {level} \u2014 MAXIMUM"
+  - locale: en
+    key: economy.income.parking
+    text: Parking income
+  - locale: en
+    key: economy.expense.materials
+    text: Material purchase
+  - locale: en
+    key: economy.expense.driver_salary
+    text: Driver salary
+  - locale: en
+    key: economy.expense.royal_tribute
+    text: Royal tribute
+  - locale: en
+    key: economy.upgrade.cart_capacity
+    text: Cart capacity
+  - locale: en
+    key: economy.upgrade.cart_speed
+    text: Cart speed
+  - locale: en
+    key: economy.upgrade.construction_speed
+    text: Construction speed
+  - locale: en
+    key: economy.notice.expense_unpaid
+    text: 'Warning: there was not enough gold for a required expense. The balance
+      did not go negative.'
+  - locale: en
+    key: economy.notice.upgrade_insufficient_gold
+    text: Not enough gold for this upgrade.
+  - locale: en
+    key: economy.notice.maximum_level
+    text: This upgrade is already at maximum level.
+  - locale: ru
+    key: ui.economy.effect.capacity
+    text: "+{value} \u043C\u0435\u0441\u0442 \u0437\u0430 \u0443\u0440\u043E\u0432\u0435\u043D\u044C"
+  - locale: ru
+    key: ui.economy.effect.speed
+    text: "+{value}% \u0437\u0430 \u0443\u0440\u043E\u0432\u0435\u043D\u044C"
+  - locale: en
+    key: ui.economy.effect.capacity
+    text: +{value} slots per level
+  - locale: en
+    key: ui.economy.effect.speed
+    text: +{value}% per level
+  - locale: ru
+    key: ui.economy.compact
+    text: "[M] \u042D\u041A\u041E\u041D\u041E\u041C\u0418\u041A\u0410   \u2022  
+      \u0417\u043E\u043B\u043E\u0442\u043E: {gold}   \u2022   \u0420\u0430\u0441\u0445\u043E\u0434\u044B
+      \u0447\u0435\u0440\u0435\u0437: {seconds} \u0441"
+  - locale: ru
+    key: ui.economy.close_hint
+    text: "M \u0438\u043B\u0438 Esc \u2014 \u0437\u0430\u043A\u0440\u044B\u0442\u044C
+      \u043C\u0435\u043D\u044E"
+  - locale: en
+    key: ui.economy.compact
+    text: "[M] ECONOMY   \u2022   Gold: {gold}   \u2022   Expenses in: {seconds}s"
+  - locale: en
+    key: ui.economy.close_hint
+    text: "M or Esc \u2014 close menu"
+  - locale: ru
+    key: ui.economy.tutorial
+    text: "\u041D\u041E\u0412\u041E\u0415: \u043D\u0430\u0436\u043C\u0438\u0442\u0435
+      M \u2014 \u044D\u043A\u043E\u043D\u043E\u043C\u0438\u043A\u0430, \u0440\u0430\u0441\u0445\u043E\u0434\u044B
+      \u0438 \u0443\u043B\u0443\u0447\u0448\u0435\u043D\u0438\u044F \u043F\u0430\u0440\u043A\u043E\u0432\u043A\u0438"
+  - locale: en
+    key: ui.economy.tutorial
+    text: "NEW: press M \u2014 parking economy, expenses and upgrades"
+  - locale: ru
+    key: ui.client_archetype.summary
+    text: "\u041A\u041B\u0418\u0415\u041D\u0422: {name}\n{description}\n\u0421\u0442\u043E\u044F\u043D\u043A\u0430:
+      \u043E\u043A\u043E\u043B\u043E {seconds} \u0441   \u2022   \u0422\u0430\u0440\u0438\u0444:
+      {gold} \u0437\u043E\u043B\u043E\u0442\u0430 / {period} \u0441"
+  - locale: ru
+    key: client.archetype.traveler
+    text: "\u041F\u0443\u0442\u043D\u0438\u043A"
+  - locale: ru
+    key: client.archetype.traveler.description
+    text: "\u0421\u043F\u043E\u043A\u043E\u0435\u043D: \u0441\u0442\u043E\u0438\u0442
+      \u043D\u0435\u0434\u043E\u043B\u0433\u043E \u0438 \u043F\u043B\u0430\u0442\u0438\u0442
+      \u043E\u0431\u044B\u0447\u043D\u044B\u0439 \u0442\u0430\u0440\u0438\u0444."
+  - locale: ru
+    key: client.archetype.merchant
+    text: "\u0422\u043E\u0440\u0433\u043E\u0432\u0435\u0446"
+  - locale: ru
+    key: client.archetype.merchant.description
+    text: "\u0421\u043F\u0435\u0448\u0438\u0442 \u043F\u043E \u0434\u0435\u043B\u0430\u043C:
+      \u0441\u0442\u043E\u0438\u0442 \u0434\u043E\u043B\u044C\u0448\u0435 \u0438
+      \u043F\u043B\u0430\u0442\u0438\u0442 \u0431\u043E\u043B\u044C\u0448\u0435."
+  - locale: ru
+    key: client.archetype.royal_inspector
+    text: "\u041A\u043E\u0440\u043E\u043B\u0435\u0432\u0441\u043A\u0438\u0439 \u0438\u043D\u0441\u043F\u0435\u043A\u0442\u043E\u0440"
+  - locale: ru
+    key: client.archetype.royal_inspector.description
+    text: "\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0439
+      \u0433\u043E\u0441\u0442\u044C: \u0437\u0430\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044F
+      \u0434\u043E\u043B\u044C\u0448\u0435, \u043D\u043E \u043F\u043B\u0430\u0442\u0438\u0442
+      \u0432\u044B\u0441\u043E\u043A\u0438\u0439 \u0442\u0430\u0440\u0438\u0444."
+  - locale: en
+    key: ui.client_archetype.summary
+    text: "CLIENT: {name}\n{description}\nParking: about {seconds}s   \u2022   Rate:
+      {gold} gold / {period}s"
+  - locale: en
+    key: client.archetype.traveler
+    text: Traveler
+  - locale: en
+    key: client.archetype.traveler.description
+    text: 'Calm: parks briefly and pays the standard rate.'
+  - locale: en
+    key: client.archetype.merchant
+    text: Merchant
+  - locale: en
+    key: client.archetype.merchant.description
+    text: 'Busy: stays longer and pays more.'
+  - locale: en
+    key: client.archetype.royal_inspector
+    text: Royal inspector
+  - locale: en
+    key: client.archetype.royal_inspector.description
+    text: 'Demanding: stays longer but pays the highest rate.'
+  - locale: ru
+    key: interaction.client.talk
+    text: "\u041F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u0442\u044C"
+  - locale: ru
+    key: interaction.client.target
+    text: "\u041A\u043B\u0438\u0435\u043D\u0442"
+  - locale: ru
+    key: interaction.client.spoke
+    text: "\u041A\u043B\u0438\u0435\u043D\u0442 \u043E\u0442\u0432\u0435\u0442\u0438\u043B"
+  - locale: ru
+    key: client.reaction.neutral
+    text: "\u0421\u041F\u041E\u041A\u041E\u0419\u041D\u041E"
+  - locale: ru
+    key: client.reaction.friendly
+    text: "\u0414\u0420\u0423\u0416\u0415\u041B\u042E\u0411\u041D\u041E"
+  - locale: ru
+    key: client.reaction.impatient
+    text: "\u0422\u041E\u0420\u041E\u041F\u0418\u0422\u0421\u042F"
+  - locale: ru
+    key: client.reaction.suspicious
+    text: "\u041D\u0410\u0411\u041B\u042E\u0414\u0410\u0415\u0422"
+  - locale: ru
+    key: client.reaction.satisfied
+    text: "\u0414\u041E\u0412\u041E\u041B\u0415\u041D"
+  - locale: ru
+    key: client.dialogue.traveler.arriving
+    text: "\u042D\u0439, \u0443\u043F\u0440\u0430\u0432\u043B\u044F\u044E\u0449\u0438\u0439!
+      \u041F\u0440\u0438\u0434\u0435\u0440\u0436\u0438 \u043C\u0435\u0441\u0442\u043E
+      \u0434\u043B\u044F \u043C\u043E\u0435\u0439 \u043B\u043E\u0448\u0430\u0434\u0438
+      \u2014 \u043E\u043D\u0430 \u0441\u0447\u0438\u0442\u0430\u0435\u0442 \u0441\u0435\u0431\u044F
+      \u043A\u0430\u0440\u0435\u0442\u043E\u0439."
+  - locale: ru
+    key: client.dialogue.traveler.parked
+    text: "\u0411\u043B\u0430\u0433\u043E\u0434\u0430\u0440\u044E. \u042F \u043D\u0435\u043D\u0430\u0434\u043E\u043B\u0433\u043E:
+      \u0442\u043E\u043B\u044C\u043A\u043E \u043A\u0443\u043F\u0438\u0442\u044C \u043A\u0430\u0440\u0442\u0443,
+      \u043D\u0430 \u043A\u043E\u0442\u043E\u0440\u043E\u0439 \u044D\u0442\u0430
+      \u043F\u0430\u0440\u043A\u043E\u0432\u043A\u0430 \u0443\u0436\u0435 \u043D\u0430\u0440\u0438\u0441\u043E\u0432\u0430\u043D\u0430."
+  - locale: ru
+    key: client.dialogue.traveler.returning
+    text: "\u0412\u0435\u0440\u043D\u0443\u043B\u0441\u044F! \u041B\u043E\u0448\u0430\u0434\u044C
+      \u0443\u0432\u0435\u0440\u044F\u0435\u0442, \u0447\u0442\u043E \u0441\u0447\u0451\u0442\u0447\u0438\u043A
+      \u0440\u0430\u0431\u043E\u0442\u0430\u043B \u0447\u0435\u0441\u0442\u043D\u043E."
+  - locale: ru
+    key: client.dialogue.traveler.waiting_payment
+    text: "\u041E\u043F\u043B\u0430\u0442\u0430 \u0443 \u043D\u0435\u0451 \u0432
+      \u0437\u0443\u0431\u0430\u0445. \u041D\u0435 \u0441\u043F\u0440\u0430\u0448\u0438\u0432\u0430\u0439,
+      \u0433\u0434\u0435 \u043E\u043D\u0430 \u0434\u0435\u0440\u0436\u0430\u043B\u0430
+      \u0441\u0434\u0430\u0447\u0443."
+  - locale: ru
+    key: client.dialogue.traveler.payment_received
+    text: "\u0427\u0435\u0441\u0442\u043D\u0430\u044F \u043F\u043B\u0430\u0442\u0430
+      \u0437\u0430 \u0447\u0435\u0441\u0442\u043D\u043E\u0435 \u0441\u0442\u043E\u0439\u043B\u043E."
+  - locale: ru
+    key: client.dialogue.traveler.leaving
+    text: "\u0423\u0434\u0430\u0447\u0438, \u0443\u043F\u0440\u0430\u0432\u043B\u044F\u044E\u0449\u0438\u0439.
+      \u0418 \u043F\u0443\u0441\u0442\u044C \u043A\u043E\u0440\u043E\u043B\u044C
+      \u043D\u0435 \u0432\u0432\u0435\u0434\u0451\u0442 \u043D\u0430\u043B\u043E\u0433
+      \u043D\u0430 \u043A\u043E\u043F\u044B\u0442\u0430!"
+  - locale: ru
+    key: client.dialogue.traveler.greeting.1
+    text: "\u0425\u043E\u0440\u043E\u0448\u0435\u0435 \u043C\u0435\u0441\u0442\u043E.
+      \u0422\u0430\u0431\u043B\u0438\u0447\u0435\u043A \u043F\u043E\u0447\u0442\u0438
+      \u0441\u0442\u043E\u043B\u044C\u043A\u043E \u0436\u0435, \u0441\u043A\u043E\u043B\u044C\u043A\u043E
+      \u0437\u0430\u0431\u043E\u0440\u043E\u0432."
+  - locale: ru
+    key: client.dialogue.traveler.greeting.2
+    text: "\u042F \u0431\u044B \u043F\u043E\u0431\u043E\u043B\u0442\u0430\u043B,
+      \u043D\u043E \u043C\u043E\u044F \u043B\u043E\u0448\u0430\u0434\u044C \u0443\u0436\u0435
+      \u0447\u0438\u0442\u0430\u0435\u0442 \u0442\u0430\u0440\u0438\u0444\u044B."
+  - locale: ru
+    key: client.dialogue.merchant.arriving
+    text: "\u041E\u0441\u0432\u043E\u0431\u043E\u0434\u0438\u0442\u0435 \u043F\u0440\u043E\u0435\u0437\u0434!
+      \u0423 \u043C\u0435\u043D\u044F \u0434\u0435\u043B\u043E\u0432\u0430\u044F
+      \u0432\u0441\u0442\u0440\u0435\u0447\u0430 \u0438 \u0442\u0440\u0438 \u043C\u0435\u0448\u043A\u0430
+      \u0441\u0440\u043E\u0447\u043D\u043E\u0441\u0442\u0438."
+  - locale: ru
+    key: client.dialogue.merchant.parked
+    text: "\u0421\u043C\u043E\u0442\u0440\u0438\u0442\u0435 \u0437\u0430 \u043B\u043E\u0448\u0430\u0434\u044C\u044E.
+      \u041E\u043D\u0430 \u043E\u0434\u043D\u0430\u0436\u0434\u044B \u043F\u0440\u043E\u0434\u0430\u043B\u0430
+      \u0442\u0435\u043B\u0435\u0433\u0443 \u0431\u0435\u0437 \u043C\u043E\u0435\u0433\u043E
+      \u0441\u043E\u0433\u043B\u0430\u0441\u0438\u044F."
+  - locale: ru
+    key: client.dialogue.merchant.returning
+    text: "\u0413\u0434\u0435 \u043C\u043E\u0439 \u0442\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442?
+      \u0412\u0440\u0435\u043C\u044F \u2014 \u0437\u043E\u043B\u043E\u0442\u043E,
+      \u043E\u0441\u043E\u0431\u0435\u043D\u043D\u043E \u043F\u0430\u0440\u043A\u043E\u0432\u043E\u0447\u043D\u043E\u0435."
+  - locale: ru
+    key: client.dialogue.merchant.waiting_payment
+    text: "\u041C\u0435\u0448\u043E\u0447\u0435\u043A \u0433\u043E\u0442\u043E\u0432.
+      \u041E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u043F\u0440\u043E\u0435\u0437\u0434,
+      \u043F\u043E\u043A\u0430 \u043F\u0440\u043E\u0446\u0435\u043D\u0442\u044B \u043D\u0435
+      \u043D\u0430\u0431\u0435\u0436\u0430\u043B\u0438."
+  - locale: ru
+    key: client.dialogue.merchant.payment_received
+    text: "\u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u043A\u0430\u043A \u0442\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442\u043D\u044B\u0435
+      \u0440\u0430\u0441\u0445\u043E\u0434\u044B."
+  - locale: ru
+    key: client.dialogue.merchant.leaving
+    text: "\u0415\u0441\u043B\u0438 \u043F\u043E\u043D\u0430\u0434\u043E\u0431\u0438\u0442\u0441\u044F
+      \u043E\u043F\u0442 \u2014 \u0441\u0432\u0438\u0441\u0442\u043D\u0438\u0442\u0435.
+      \u0415\u0441\u043B\u0438 \u0448\u0442\u0440\u0430\u0444 \u2014 \u043D\u0435
+      \u0441\u0432\u0438\u0441\u0442\u0438\u0442\u0435."
+  - locale: ru
+    key: client.dialogue.merchant.greeting.1
+    text: "\u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440 \u0431\u0435\u0441\u043F\u043B\u0430\u0442\u043D\u043E?
+      \u041F\u043E\u0434\u043E\u0437\u0440\u0438\u0442\u0435\u043B\u044C\u043D\u043E
+      \u0449\u0435\u0434\u0440\u043E."
+  - locale: ru
+    key: client.dialogue.merchant.greeting.2
+    text: "\u041A\u0440\u0430\u0442\u043A\u043E, \u043F\u043E\u0436\u0430\u043B\u0443\u0439\u0441\u0442\u0430.
+      \u0420\u044B\u043D\u043E\u043A \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u0435\u0442\u0441\u044F
+      \u0440\u0430\u043D\u044C\u0448\u0435 \u0437\u0434\u0440\u0430\u0432\u043E\u0433\u043E
+      \u0441\u043C\u044B\u0441\u043B\u0430."
+  - locale: ru
+    key: client.dialogue.royal_inspector.arriving
+    text: "\u041A\u043E\u0440\u043E\u043B\u0435\u0432\u0441\u043A\u0430\u044F \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430.
+      \u0414\u0435\u043B\u0430\u0439\u0442\u0435 \u0432\u0438\u0434, \u0447\u0442\u043E
+      \u0432\u0441\u0451 \u0442\u0430\u043A \u0438 \u0437\u0430\u0434\u0443\u043C\u0430\u043D\u043E."
+  - locale: ru
+    key: client.dialogue.royal_inspector.parked
+    text: "\u041E\u0441\u043C\u043E\u0442\u0440\u044E \u043E\u0431\u044A\u0435\u043A\u0442.
+      \u0417\u0430\u0431\u043E\u0440\u044B \u043F\u0435\u0440\u0435\u0441\u0447\u0438\u0442\u0430\u044E
+      \u043B\u0438\u0447\u043D\u043E."
+  - locale: ru
+    key: client.dialogue.royal_inspector.returning
+    text: "\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u043E\u043A\u043E\u043D\u0447\u0435\u043D\u0430.
+      \u041D\u0430\u0440\u0443\u0448\u0435\u043D\u0438\u044F \u0434\u043E\u0441\u0442\u0430\u0442\u043E\u0447\u043D\u043E
+      \u0441\u0440\u0435\u0434\u043D\u0435\u0432\u0435\u043A\u043E\u0432\u044B\u0435."
+  - locale: ru
+    key: client.dialogue.royal_inspector.waiting_payment
+    text: "\u041A\u0430\u0437\u043D\u0430 \u043F\u043B\u0430\u0442\u0438\u0442 \u0442\u043E\u0447\u043D\u043E.
+      \u0418\u043D\u043E\u0433\u0434\u0430."
+  - locale: ru
+    key: client.dialogue.royal_inspector.payment_received
+    text: "\u041F\u043E\u043B\u0443\u0447\u0435\u043D\u043E? \u0417\u043D\u0430\u0447\u0438\u0442,
+      \u0432 \u043E\u0442\u0447\u0451\u0442\u0435 \u043F\u0430\u0440\u043A\u043E\u0432\u043A\u0430
+      \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u0435\u0442."
+  - locale: ru
+    key: client.dialogue.royal_inspector.leaving
+    text: "\u041F\u0435\u0440\u0435\u0434\u0430\u043C \u043A\u043E\u0440\u043E\u043B\u044E:
+      \u0448\u043B\u0430\u0433\u0431\u0430\u0443\u043C \u043F\u043E\u0434\u043D\u0438\u043C\u0430\u0435\u0442\u0441\u044F
+      \u0443\u0431\u0435\u0434\u0438\u0442\u0435\u043B\u044C\u043D\u043E."
+  - locale: ru
+    key: client.dialogue.royal_inspector.greeting.1
+    text: "\u041F\u043E\u0447\u0435\u043C\u0443 \u0443 \u0432\u0430\u0441 \u0433\u043E\u0431\u043B\u0438\u043D\u043E\u0432
+      \u0431\u044C\u044E\u0442 \u0434\u043B\u044F \u043F\u043E\u0432\u044B\u0448\u0435\u043D\u0438\u044F
+      \u043F\u0440\u043E\u0438\u0437\u0432\u043E\u0434\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u0438?"
+  - locale: ru
+    key: client.dialogue.royal_inspector.greeting.2
+    text: "\u041D\u0435 \u043E\u0442\u0432\u0435\u0447\u0430\u0439\u0442\u0435. \u042F
+      \u0443\u0436\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043B: \xAB\u043C\u0435\u0441\u0442\u043D\u0430\u044F
+      \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u043C\u043E\u0442\u0438\u0432\u0430\u0446\u0438\u0438\xBB."
+  - locale: en
+    key: interaction.client.talk
+    text: Talk
+  - locale: en
+    key: interaction.client.target
+    text: Client
+  - locale: en
+    key: interaction.client.spoke
+    text: The client replied
+  - locale: en
+    key: client.reaction.neutral
+    text: CALM
+  - locale: en
+    key: client.reaction.friendly
+    text: FRIENDLY
+  - locale: en
+    key: client.reaction.impatient
+    text: IN A HURRY
+  - locale: en
+    key: client.reaction.suspicious
+    text: OBSERVING
+  - locale: en
+    key: client.reaction.satisfied
+    text: SATISFIED
+  - locale: en
+    key: client.dialogue.traveler.arriving
+    text: "Manager! Hold a space for my horse \u2014 she thinks she is a carriage."
+  - locale: en
+    key: client.dialogue.traveler.parked
+    text: 'Thank you. I will be brief: I only need a map where this parking lot is
+      already drawn.'
+  - locale: en
+    key: client.dialogue.traveler.returning
+    text: I am back! The horse insists the meter was honest.
+  - locale: en
+    key: client.dialogue.traveler.waiting_payment
+    text: The payment is in her teeth. Do not ask where she kept the change.
+  - locale: en
+    key: client.dialogue.traveler.payment_received
+    text: Fair payment for a fair stall.
+  - locale: en
+    key: client.dialogue.traveler.leaving
+    text: Good luck, manager. May the king never invent a hoof tax!
+  - locale: en
+    key: client.dialogue.traveler.greeting.1
+    text: Fine place. Almost as many signs as fences.
+  - locale: en
+    key: client.dialogue.traveler.greeting.2
+    text: I would chat, but my horse is already reading the rates.
+  - locale: en
+    key: client.dialogue.merchant.arriving
+    text: Clear the lane! I have a business meeting and three sacks of urgency.
+  - locale: en
+    key: client.dialogue.merchant.parked
+    text: Watch the horse. She once sold a cart without my permission.
+  - locale: en
+    key: client.dialogue.merchant.returning
+    text: Where is my transport? Time is gold, especially parking time.
+  - locale: en
+    key: client.dialogue.merchant.waiting_payment
+    text: The pouch is ready. Open the lane before interest starts accruing.
+  - locale: en
+    key: client.dialogue.merchant.payment_received
+    text: Record it as a transport expense.
+  - locale: en
+    key: client.dialogue.merchant.leaving
+    text: Whistle if you need wholesale. Do not whistle if it is a fine.
+  - locale: en
+    key: client.dialogue.merchant.greeting.1
+    text: A free conversation? Suspiciously generous.
+  - locale: en
+    key: client.dialogue.merchant.greeting.2
+    text: Briefly, please. The market closes before common sense does.
+  - locale: en
+    key: client.dialogue.royal_inspector.arriving
+    text: Royal inspection. Pretend everything is exactly as intended.
+  - locale: en
+    key: client.dialogue.royal_inspector.parked
+    text: I shall inspect the premises. I will count the fences personally.
+  - locale: en
+    key: client.dialogue.royal_inspector.returning
+    text: Inspection complete. The violations are acceptably medieval.
+  - locale: en
+    key: client.dialogue.royal_inspector.waiting_payment
+    text: The treasury pays precisely. Occasionally.
+  - locale: en
+    key: client.dialogue.royal_inspector.payment_received
+    text: Received? Then this parking lot officially exists.
+  - locale: en
+    key: client.dialogue.royal_inspector.leaving
+    text: 'I shall report to the king: the barrier rises convincingly.'
+  - locale: en
+    key: client.dialogue.royal_inspector.greeting.1
+    text: Why are goblins struck to improve productivity?
+  - locale: en
+    key: client.dialogue.royal_inspector.greeting.2
+    text: "Do not answer. I have written: \u201Clocal motivation system\u201D."

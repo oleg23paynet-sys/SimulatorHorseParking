@@ -1,0 +1,95 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d309d103e416bf54da3c87247066426a, type: 3}
+  m_Name: ParkingClientDialogueSettings
+  m_EditorClassIdentifier: HorseParking.Presentation::HorseParking.Presentation.Parking.ParkingClientDialogueSettings
+  profiles:
+  - archetypeId: traveler
+    lines:
+    - moment: 0
+      textKey: client.dialogue.traveler.arriving
+      reaction: 1
+    - moment: 1
+      textKey: client.dialogue.traveler.parked
+      reaction: 1
+    - moment: 2
+      textKey: client.dialogue.traveler.returning
+      reaction: 1
+    - moment: 3
+      textKey: client.dialogue.traveler.waiting_payment
+      reaction: 1
+    - moment: 4
+      textKey: client.dialogue.traveler.payment_received
+      reaction: 4
+    - moment: 5
+      textKey: client.dialogue.traveler.leaving
+      reaction: 4
+    - moment: 6
+      textKey: client.dialogue.traveler.greeting.1
+      reaction: 1
+    - moment: 6
+      textKey: client.dialogue.traveler.greeting.2
+      reaction: 1
+  - archetypeId: merchant
+    lines:
+    - moment: 0
+      textKey: client.dialogue.merchant.arriving
+      reaction: 2
+    - moment: 1
+      textKey: client.dialogue.merchant.parked
+      reaction: 2
+    - moment: 2
+      textKey: client.dialogue.merchant.returning
+      reaction: 2
+    - moment: 3
+      textKey: client.dialogue.merchant.waiting_payment
+      reaction: 2
+    - moment: 4
+      textKey: client.dialogue.merchant.payment_received
+      reaction: 4
+    - moment: 5
+      textKey: client.dialogue.merchant.leaving
+      reaction: 4
+    - moment: 6
+      textKey: client.dialogue.merchant.greeting.1
+      reaction: 2
+    - moment: 6
+      textKey: client.dialogue.merchant.greeting.2
+      reaction: 2
+  - archetypeId: royal_inspector
+    lines:
+    - moment: 0
+      textKey: client.dialogue.royal_inspector.arriving
+      reaction: 3
+    - moment: 1
+      textKey: client.dialogue.royal_inspector.parked
+      reaction: 3
+    - moment: 2
+      textKey: client.dialogue.royal_inspector.returning
+      reaction: 3
+    - moment: 3
+      textKey: client.dialogue.royal_inspector.waiting_payment
+      reaction: 3
+    - moment: 4
+      textKey: client.dialogue.royal_inspector.payment_received
+      reaction: 4
+    - moment: 5
+      textKey: client.dialogue.royal_inspector.leaving
+      reaction: 4
+    - moment: 6
+      textKey: client.dialogue.royal_inspector.greeting.1
+      reaction: 3
+    - moment: 6
+      textKey: client.dialogue.royal_inspector.greeting.2
+      reaction: 3
+  automaticLineDurationSeconds: 4
+  interactionLineDurationSeconds: 5

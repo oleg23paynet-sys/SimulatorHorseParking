@@ -10,7 +10,7 @@ namespace HorseParking.Presentation.Construction
 {
     /// <summary>
     /// Replaceable presentation adapter for striking a construction worker.
-    /// It applies persistent build acceleration and ready-made visual hit feedback.
+    /// It requests a temporary build acceleration and plays ready-made hit feedback.
     /// </summary>
     public sealed class ConstructionWorkerInteractionTarget : MonoBehaviour, IInteractionTarget
     {
@@ -19,9 +19,12 @@ namespace HorseParking.Presentation.Construction
         [SerializeField] private ConstructionWorkerMotionPresenter workerMotion = null!;
         [SerializeField] private ParticleSystem hitEffect = null!;
         [Min(1.01f)] [SerializeField] private float constructionSpeedMultiplier = 1.5f;
-        [Min(0.5f)] [SerializeField] private float interactionRadius = 2.5f;
+        [Min(0.1f)] [SerializeField] private float boostDurationSeconds = 5f;
+        [Min(0.1f)] [SerializeField] private float hitCooldownSeconds = 15f;
+        [Min(0.5f)] [SerializeField] private float interactionRadius = 5f;
 
         private static readonly System.Collections.Generic.HashSet<ConstructionWorkerInteractionTarget> ActiveTargets = new();
+        private float animatorBoostEndsAt;
 
         public string Id => "construction-worker";
 
@@ -30,6 +33,7 @@ namespace HorseParking.Presentation.Construction
             && compositionRoot.HasConstructionRequirements
             && workerMotion != null
             && workerMotion.IsBuildingNow
+            && compositionRoot.ConstructionRequirementsUseCase.CanApplyWorkerHitSpeedBoost
             && compositionRoot.ConstructionRequirementsUseCase.GetSnapshot().State == ConstructionState.InProgress
                 ? InteractionAvailability.Available
                 : InteractionAvailability.Unavailable;
@@ -53,8 +57,10 @@ namespace HorseParking.Presentation.Construction
         public InteractionResult Interact()
         {
             if (Availability != InteractionAvailability.Available
-                || !compositionRoot.ConstructionRequirementsUseCase.ApplyWorkerHitSpeedMultiplier(
-                    constructionSpeedMultiplier))
+                || !compositionRoot.ConstructionRequirementsUseCase.TryApplyWorkerHitSpeedBoost(
+                    constructionSpeedMultiplier,
+                    boostDurationSeconds,
+                    hitCooldownSeconds))
             {
                 return InteractionResult.Failure(new LocalizationKey("interaction.unavailable"));
             }
@@ -63,10 +69,22 @@ namespace HorseParking.Presentation.Construction
             {
                 workerAnimator.speed = constructionSpeedMultiplier;
                 workerAnimator.SetTrigger("wasHit");
+                animatorBoostEndsAt = Time.time + boostDurationSeconds;
             }
             hitEffect?.Emit(10);
 
             return InteractionResult.Success(new LocalizationKey("interaction.construction_worker.hit_done"));
+        }
+
+        private void Update()
+        {
+            if (workerAnimator != null
+                && animatorBoostEndsAt > 0f
+                && Time.time >= animatorBoostEndsAt)
+            {
+                workerAnimator.speed = 1f;
+                animatorBoostEndsAt = 0f;
+            }
         }
 
         private void OnEnable()

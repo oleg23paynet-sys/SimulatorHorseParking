@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using HorseParking.Core.Economy;
 using HorseParking.Core.Localization;
 using HorseParking.Core.Logistics;
 
@@ -93,30 +94,34 @@ namespace HorseParking.Application.Logistics
         private readonly Warehouse warehouse;
         private readonly DeliveryCart cart;
         private readonly IReadOnlyDictionary<ResourceId, int> storePrices;
-        private int gold;
+        private readonly GoldWallet wallet;
 
         public event Action? CartInventoryChanged;
         public event Action? WarehouseInventoryChanged;
-        public event Action? GoldChanged;
+        public event Action? GoldChanged
+        {
+            add => wallet.BalanceChanged += value;
+            remove => wallet.BalanceChanged -= value;
+        }
 
         public LogisticsInventoryUseCase(
             ResourceCatalog resourceCatalog,
             Warehouse warehouse,
             DeliveryCart cart,
             IReadOnlyDictionary<ResourceId, int> storePrices,
-            int startingGold)
+            GoldWallet wallet)
         {
             this.resourceCatalog = resourceCatalog ?? throw new ArgumentNullException(nameof(resourceCatalog));
             this.warehouse = warehouse ?? throw new ArgumentNullException(nameof(warehouse));
             this.cart = cart ?? throw new ArgumentNullException(nameof(cart));
             this.storePrices = storePrices ?? throw new ArgumentNullException(nameof(storePrices));
-            if (startingGold < 0) throw new ArgumentOutOfRangeException(nameof(startingGold));
-            gold = startingGold;
+            this.wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
         }
 
         public string WarehouseId => warehouse.Id;
         public string CartId => cart.Id;
-        public int Gold => gold;
+        public int Gold => wallet.Balance;
+        public GoldWallet Wallet => wallet;
 
         /// <summary>
         /// Credits earned gold to the single shared player balance. Parking and future
@@ -125,9 +130,13 @@ namespace HorseParking.Application.Logistics
         public int AddGold(int amount)
         {
             if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount));
-            gold = checked(gold + amount);
-            GoldChanged?.Invoke();
-            return gold;
+            return wallet.Credit(amount, new LocalizationKey("economy.income.parking"));
+        }
+
+        public void IncreaseCartCapacity(int additionalCapacityUnits)
+        {
+            cart.Cargo.IncreaseCapacity(additionalCapacityUnits);
+            CartInventoryChanged?.Invoke();
         }
 
         public IReadOnlyList<StoreOfferSnapshot> GetStoreOffers()
@@ -268,25 +277,31 @@ namespace HorseParking.Application.Logistics
             if (!resourceCatalog.TryGet(resourceId, out var definition)
                 || !storePrices.TryGetValue(resourceId, out var unitPrice))
             {
-                return PurchaseResult.Failure(PurchaseFailureReason.UnknownResource, gold);
+                return PurchaseResult.Failure(PurchaseFailureReason.UnknownResource, wallet.Balance);
             }
 
             var totalPrice = checked(unitPrice * quantity);
-            if (gold < totalPrice)
+            if (wallet.Balance < totalPrice)
             {
-                return PurchaseResult.Failure(PurchaseFailureReason.InsufficientGold, gold);
+                return PurchaseResult.Failure(PurchaseFailureReason.InsufficientGold, wallet.Balance);
             }
 
             var addResult = cart.Cargo.TryAdd(definition, quantity);
             if (!addResult.Succeeded)
             {
-                return PurchaseResult.Failure(PurchaseFailureReason.InsufficientCartCapacity, gold);
+                return PurchaseResult.Failure(PurchaseFailureReason.InsufficientCartCapacity, wallet.Balance);
             }
 
-            gold -= totalPrice;
+            if (!wallet.TryDebit(
+                    totalPrice,
+                    GoldTransactionKind.Purchase,
+                    new LocalizationKey("economy.expense.materials")))
+            {
+                throw new InvalidOperationException("Gold balance changed during an atomic material purchase.");
+            }
+
             CartInventoryChanged?.Invoke();
-            GoldChanged?.Invoke();
-            return PurchaseResult.Success(gold);
+            return PurchaseResult.Success(wallet.Balance);
         }
 
         private InventorySnapshot CreateSnapshot(ResourceInventory inventory)

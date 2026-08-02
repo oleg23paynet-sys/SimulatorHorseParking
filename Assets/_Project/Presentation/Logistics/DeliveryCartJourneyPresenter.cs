@@ -176,7 +176,11 @@ namespace HorseParking.Presentation.Logistics
             if (remainingDistance > 0.0001f)
             {
                 var moveDistance = Mathf.Min(
-                    travelSpeedMetersPerSecond * Time.deltaTime,
+                    travelSpeedMetersPerSecond
+                    * (compositionRoot.HasParkingEconomy
+                        ? (float)compositionRoot.ParkingEconomyUseCase.CartSpeedMultiplier
+                        : 1f)
+                    * Time.deltaTime,
                     remainingDistance);
                 if (IsRouteBlocked(current, heading.normalized, moveDistance))
                 {

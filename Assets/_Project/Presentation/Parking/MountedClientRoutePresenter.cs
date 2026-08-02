@@ -22,11 +22,15 @@ namespace HorseParking.Presentation.Parking
         private Transform? destination;
         private readonly Queue<Transform> waypoints = new Queue<Transform>();
         private RouteState state;
+        private Vector3 spawnPosition;
+        private Quaternion spawnRotation;
 
         private enum RouteState { None, Arriving, GoingToPayment, Exiting }
 
         private void Awake()
         {
+            spawnPosition = clientRoot != null ? clientRoot.position : transform.position;
+            spawnRotation = clientRoot != null ? clientRoot.rotation : transform.rotation;
             animationAdapter = animationAdapterBehaviour as IMountedClientAnimation;
             if (animationAdapter == null)
             {
@@ -65,6 +69,15 @@ namespace HorseParking.Presentation.Parking
         public void BeginArrival() => BeginRoute(RouteState.Arriving, entryLanePoint, parkingPoint);
         public void BeginPaymentApproach() => BeginRoute(RouteState.GoingToPayment, entryLanePoint, paymentPoint);
         public void BeginExit() => BeginRoute(RouteState.Exiting, exitPoint);
+
+        public void ResetToSpawn()
+        {
+            waypoints.Clear();
+            destination = null;
+            state = RouteState.None;
+            clientRoot.SetPositionAndRotation(spawnPosition, spawnRotation);
+            animationAdapter.SetWalking(false);
+        }
 
         private void BeginRoute(RouteState nextState, params Transform[] routePoints)
         {

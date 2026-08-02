@@ -21,6 +21,7 @@ namespace HorseParking.Presentation.Construction
 
         [SerializeField] private Animator workerAnimator = null!;
         [SerializeField] private NavMeshAgent navigationAgent = null!;
+        [SerializeField] private Transform workerVisualRoot = null!;
         [SerializeField] private GameObject hammerVisual = null!;
         [SerializeField] private GameObject groundVortex = null!;
         [SerializeField] private Transform[] spawnPoints = System.Array.Empty<Transform>();
@@ -30,7 +31,7 @@ namespace HorseParking.Presentation.Construction
         [SerializeField] private Transform constructionSite = null!;
         [SerializeField] private LayerMask spawnBlockingMask = -1;
         [Min(0.1f)] [SerializeField] private float moveSpeed = 1.35f;
-        [Min(0.05f)] [SerializeField] private float emergenceDuration = 1.2f;
+        [Min(0.05f)] [SerializeField] private float emergenceDuration = 1.45f;
         [Min(0.05f)] [SerializeField] private float disappearanceDuration = 1f;
         [Min(0.01f)] [SerializeField] private float stoppingDistance = 0.12f;
         [Min(0.1f)] [SerializeField] private float routePointSampleRadius = 0.7f;
@@ -40,19 +41,29 @@ namespace HorseParking.Presentation.Construction
         [Min(0.2f)] [SerializeField] private float spawnCheckTopHeight = 1.58f;
         [Min(0.1f)] [SerializeField] private float minimumSiteDistance = 1.45f;
         [Min(0.1f)] [SerializeField] private float spawnRetryDelay = 1.25f;
-        [Min(0.05f)] [SerializeField] private float vortexLeadInDuration = 0.18f;
+        [Min(0.05f)] [SerializeField] private float vortexLeadInDuration = 0.3f;
+        [Min(0.1f)] [SerializeField] private float spawnSinkDepth = 1.1f;
+        [Min(0.2f)] [SerializeField] private float wanderRadius = 0.8f;
+        [Min(0.1f)] [SerializeField] private float minimumWanderDuration = 1f;
+        [Min(0.1f)] [SerializeField] private float maximumWanderDuration = 3f;
+        [Min(0.05f)] [SerializeField] private float wanderPauseDuration = 0.2f;
 
         private WorkerPhase phase = WorkerPhase.Hidden;
+        private float phaseStartedAt;
         private float phaseEndsAt;
         private float nextSpawnRetryAt;
+        private float wanderEndsAt;
+        private float nextWanderDecisionAt;
         private Collider[] workerColliders = System.Array.Empty<Collider>();
         private Renderer[] workerRenderers = System.Array.Empty<Renderer>();
         private ParticleSystem[] vortexSystems = System.Array.Empty<ParticleSystem>();
         private Vector3 sampledSpawnPoint;
         private Vector3 sampledBuildPoint;
-        private Vector3 sampledExitPoint;
+        private Vector3 sampledScatterPoint;
         private EntityId reservedSpawnPointId;
         private bool hasSpawnReservation;
+        private Vector3 visualRestLocalPosition;
+        private Quaternion visualRestLocalRotation;
         private readonly List<int> shuffledSpawnPointIndices = new();
 
         public bool HasReachedBuildPoint { get; private set; }
@@ -62,6 +73,7 @@ namespace HorseParking.Presentation.Construction
         public void Configure(
             Animator animator,
             NavMeshAgent agent,
+            Transform visualRoot,
             GameObject hammer,
             GameObject vortex,
             Transform[] emergencePoints,
@@ -72,6 +84,7 @@ namespace HorseParking.Presentation.Construction
         {
             workerAnimator = animator;
             navigationAgent = agent;
+            workerVisualRoot = visualRoot;
             hammerVisual = hammer;
             groundVortex = vortex;
             spawnPoints = emergencePoints;
@@ -81,12 +94,15 @@ namespace HorseParking.Presentation.Construction
             constructionSite = site;
             navigationAgent.speed = moveSpeed;
             navigationAgent.stoppingDistance = stoppingDistance;
+            visualRestLocalPosition = workerVisualRoot.localPosition;
+            visualRestLocalRotation = workerVisualRoot.localRotation;
 
             CachePresentationParts();
             SetWorkerVisible(false);
             SetWorkerCollidersEnabled(false);
             SetHammerVisible(false);
             StopGroundVortex();
+            ResetVisualPose();
         }
 
         public void BeginApproach()
@@ -99,6 +115,7 @@ namespace HorseParking.Presentation.Construction
             nextSpawnRetryAt = Time.time;
 
             CachePresentationParts();
+            ResetVisualPose();
             SetHammerVisible(false);
             SetWorkerVisible(false);
             SetWorkerCollidersEnabled(false);
@@ -113,7 +130,9 @@ namespace HorseParking.Presentation.Construction
 
         public void BeginDeparture()
         {
-            if (phase == WorkerPhase.WalkingToExit
+            if (phase == WorkerPhase.WalkingToScatter
+                || phase == WorkerPhase.Wandering
+                || phase == WorkerPhase.WalkingToVortex
                 || phase == WorkerPhase.Disappearing
                 || phase == WorkerPhase.Exited)
             {
@@ -121,6 +140,7 @@ namespace HorseParking.Presentation.Construction
             }
 
             IsBuildingNow = false;
+            ResetVisualPose();
             SetHammerVisible(false);
             workerAnimator.speed = 1f;
             navigationAgent.nextPosition = sampledBuildPoint;
@@ -132,8 +152,8 @@ namespace HorseParking.Presentation.Construction
                 isBuilding: false,
                 isEmerging: false,
                 isDisappearing: false);
-            phase = WorkerPhase.WalkingToExit;
-            SetDestination(sampledExitPoint);
+            phase = WorkerPhase.WalkingToScatter;
+            SetDestination(sampledScatterPoint);
         }
 
         private void Update()
@@ -151,16 +171,18 @@ namespace HorseParking.Presentation.Construction
                     if (Time.time >= phaseEndsAt)
                     {
                         SetWorkerVisible(true);
+                        workerAnimator.speed = 1f;
                         phase = WorkerPhase.Emerging;
-                        phaseEndsAt = Time.time + Mathf.Max(
-                            0.05f,
-                            emergenceDuration - vortexLeadInDuration);
+                        phaseStartedAt = Time.time;
+                        phaseEndsAt = Time.time + emergenceDuration;
                     }
                     break;
 
                 case WorkerPhase.Emerging:
+                    UpdateEmergenceVisual();
                     if (Time.time >= phaseEndsAt)
                     {
+                        ResetVisualPose();
                         StopGroundVortex();
                         if (!EnableNavigationAt(sampledSpawnPoint))
                         {
@@ -189,25 +211,26 @@ namespace HorseParking.Presentation.Construction
                     }
                     break;
 
-                case WorkerPhase.WalkingToExit:
+                case WorkerPhase.WalkingToScatter:
                     if (HasArrived())
                     {
-                        navigationAgent.isStopped = true;
-                        navigationAgent.ResetPath();
-                        navigationAgent.enabled = false;
-                        SetWorkerCollidersEnabled(false);
-                        SetAnimatorState(
-                            isWalking: false,
-                            isBuilding: false,
-                            isEmerging: false,
-                            isDisappearing: true);
-                        PlayGroundVortex();
-                        phase = WorkerPhase.Disappearing;
-                        phaseEndsAt = Time.time + disappearanceDuration;
+                        BeginWandering();
+                    }
+                    break;
+
+                case WorkerPhase.Wandering:
+                    UpdateWandering();
+                    break;
+
+                case WorkerPhase.WalkingToVortex:
+                    if (HasArrived())
+                    {
+                        BeginDisappearing();
                     }
                     break;
 
                 case WorkerPhase.Disappearing:
+                    UpdateDisappearanceVisual();
                     if (Time.time >= phaseEndsAt)
                     {
                         SetAnimatorState(
@@ -216,6 +239,7 @@ namespace HorseParking.Presentation.Construction
                             isEmerging: false,
                             isDisappearing: false);
                         SetWorkerVisible(false);
+                        ResetVisualPose();
                         StopGroundVortex();
                         navigationAgent.enabled = false;
                         HasExited = true;
@@ -242,7 +266,8 @@ namespace HorseParking.Presentation.Construction
             transform.SetPositionAndRotation(
                 sampledSpawnPoint,
                 LookTowards(sampledSpawnPoint, sampledBuildPoint));
-            workerAnimator.speed = 1f;
+            PrepareEmergenceVisual();
+            workerAnimator.speed = 0f;
             SetAnimatorState(
                 isWalking: false,
                 isBuilding: false,
@@ -255,19 +280,68 @@ namespace HorseParking.Presentation.Construction
             PlayGroundVortex();
             SetWorkerCollidersEnabled(false);
             phase = WorkerPhase.VortexLeadIn;
+            phaseStartedAt = Time.time;
             phaseEndsAt = Time.time + vortexLeadInDuration;
+        }
+
+        private void PrepareEmergenceVisual()
+        {
+            if (workerVisualRoot == null) return;
+            workerVisualRoot.localPosition =
+                visualRestLocalPosition + Vector3.down * spawnSinkDepth;
+            workerVisualRoot.localRotation = visualRestLocalRotation;
+        }
+
+        private void UpdateEmergenceVisual()
+        {
+            if (workerVisualRoot == null) return;
+            var normalizedTime = Mathf.InverseLerp(
+                phaseStartedAt,
+                phaseEndsAt,
+                Time.time);
+            var rise = Mathf.SmoothStep(0f, 1f, normalizedTime);
+            var heightOffset = Mathf.Lerp(-spawnSinkDepth, 0f, rise);
+
+            workerVisualRoot.localPosition =
+                visualRestLocalPosition + Vector3.up * heightOffset;
+            workerVisualRoot.localRotation = visualRestLocalRotation;
+        }
+
+        private void PrepareDisappearanceVisual()
+        {
+            ResetVisualPose();
+        }
+
+        private void UpdateDisappearanceVisual()
+        {
+            if (workerVisualRoot == null) return;
+            var normalizedTime = Mathf.InverseLerp(
+                phaseStartedAt,
+                phaseEndsAt,
+                Time.time);
+            var easedTime = Mathf.SmoothStep(0f, 1f, normalizedTime);
+            workerVisualRoot.localPosition =
+                visualRestLocalPosition
+                + Vector3.down * (spawnSinkDepth * easedTime);
+            workerVisualRoot.localRotation = visualRestLocalRotation;
+        }
+
+        private void ResetVisualPose()
+        {
+            if (workerVisualRoot == null) return;
+            workerVisualRoot.localPosition = visualRestLocalPosition;
+            workerVisualRoot.localRotation = visualRestLocalRotation;
         }
 
         private bool TrySelectValidRoute()
         {
-            if (spawnPoints.Length == 0 || workPoint == null || exitPoint == null)
+            if (spawnPoints.Length == 0 || workPoint == null)
             {
                 return false;
             }
 
             if (!TrySamplePoint(workPoint.position, workPointSampleRadius, out sampledBuildPoint)
-                || !TrySamplePoint(exitPoint.position, routePointSampleRadius, out sampledExitPoint)
-                || !IsSpawnAreaFree(sampledExitPoint))
+                || !TryResolvePersonalDeparturePoint())
             {
                 return false;
             }
@@ -285,7 +359,7 @@ namespace HorseParking.Presentation.Construction
                     || !IsFarEnoughFromSite(sampledCandidate)
                     || !IsSpawnAreaFree(sampledCandidate)
                     || !HasCompletePath(sampledCandidate, sampledBuildPoint)
-                    || !HasCompletePath(sampledBuildPoint, sampledExitPoint))
+                    || !HasCompletePath(sampledScatterPoint, sampledCandidate))
                 {
                     continue;
                 }
@@ -344,14 +418,44 @@ namespace HorseParking.Presentation.Construction
                 }
             }
 
-            // Fisher-Yates: every retry checks the authored points in a new order.
+            // Keep the personal point first. Only fallbacks are shuffled so two
+            // workers do not accidentally swap and later converge on one vortex.
             for (var index = shuffledSpawnPointIndices.Count - 1; index > 0; index--)
             {
-                var swapIndex = Random.Range(0, index + 1);
+                var swapIndex = Random.Range(1, index + 1);
                 var temporary = shuffledSpawnPointIndices[index];
                 shuffledSpawnPointIndices[index] = shuffledSpawnPointIndices[swapIndex];
                 shuffledSpawnPointIndices[swapIndex] = temporary;
             }
+        }
+
+        private bool TryResolvePersonalDeparturePoint()
+        {
+            var personalIndex = Mathf.Clamp(
+                preferredSpawnPointIndex,
+                0,
+                spawnPoints.Length - 1);
+            var personalPoint = spawnPoints[personalIndex];
+            if (personalPoint != null
+                && TrySamplePoint(
+                    personalPoint.position,
+                    routePointSampleRadius,
+                    out sampledScatterPoint)
+                && IsSpawnAreaFree(sampledScatterPoint)
+                && HasCompletePath(sampledBuildPoint, sampledScatterPoint))
+            {
+                return true;
+            }
+
+            // Compatibility fallback for scenes authored before personal spawn
+            // points were introduced.
+            return exitPoint != null
+                   && TrySamplePoint(
+                       exitPoint.position,
+                       routePointSampleRadius,
+                       out sampledScatterPoint)
+                   && IsSpawnAreaFree(sampledScatterPoint)
+                   && HasCompletePath(sampledBuildPoint, sampledScatterPoint);
         }
 
         private bool IsFarEnoughFromSite(Vector3 position)
@@ -388,6 +492,116 @@ namespace HorseParking.Presentation.Construction
             phase = WorkerPhase.Building;
         }
 
+        private void BeginWandering()
+        {
+            navigationAgent.isStopped = true;
+            navigationAgent.ResetPath();
+            SetAnimatorState(
+                isWalking: false,
+                isBuilding: false,
+                isEmerging: false,
+                isDisappearing: false);
+            phase = WorkerPhase.Wandering;
+            wanderEndsAt = Time.time + Random.Range(
+                minimumWanderDuration,
+                Mathf.Max(minimumWanderDuration, maximumWanderDuration));
+            nextWanderDecisionAt = Time.time + wanderPauseDuration;
+        }
+
+        private void UpdateWandering()
+        {
+            if (Time.time >= wanderEndsAt)
+            {
+                BeginWalkToVortex();
+                return;
+            }
+
+            if (!HasArrived() || Time.time < nextWanderDecisionAt)
+            {
+                return;
+            }
+
+            navigationAgent.isStopped = true;
+            navigationAgent.ResetPath();
+            SetAnimatorState(
+                isWalking: false,
+                isBuilding: false,
+                isEmerging: false,
+                isDisappearing: false);
+
+            if (TrySetRandomWanderDestination())
+            {
+                SetAnimatorState(
+                    isWalking: true,
+                    isBuilding: false,
+                    isEmerging: false,
+                    isDisappearing: false);
+            }
+
+            nextWanderDecisionAt = Time.time + wanderPauseDuration;
+        }
+
+        private bool TrySetRandomWanderDestination()
+        {
+            for (var attempt = 0; attempt < 12; attempt++)
+            {
+                var direction = Random.insideUnitCircle;
+                if (direction.sqrMagnitude < 0.04f)
+                {
+                    continue;
+                }
+
+                direction.Normalize();
+                var requestedPoint = sampledScatterPoint
+                    + new Vector3(direction.x, 0f, direction.y)
+                    * Random.Range(wanderRadius * 0.45f, wanderRadius);
+                if (!TrySamplePoint(
+                        requestedPoint,
+                        routePointSampleRadius,
+                        out var wanderPoint)
+                    || !HasCompletePath(transform.position, wanderPoint))
+                {
+                    continue;
+                }
+
+                SetDestination(wanderPoint);
+                return true;
+            }
+
+            return false;
+        }
+
+        private void BeginWalkToVortex()
+        {
+            SetAnimatorState(
+                isWalking: true,
+                isBuilding: false,
+                isEmerging: false,
+                isDisappearing: false);
+            phase = WorkerPhase.WalkingToVortex;
+            // Every worker owns a separate authored exit point. Returning to that
+            // point prevents several workers from collapsing onto one vortex.
+            SetDestination(sampledScatterPoint);
+        }
+
+        private void BeginDisappearing()
+        {
+            navigationAgent.isStopped = true;
+            navigationAgent.ResetPath();
+            navigationAgent.enabled = false;
+            SetWorkerCollidersEnabled(false);
+            SetAnimatorState(
+                isWalking: false,
+                isBuilding: false,
+                isEmerging: false,
+                isDisappearing: true);
+            PlayGroundVortex();
+            PrepareDisappearanceVisual();
+            phase = WorkerPhase.Disappearing;
+            phaseStartedAt = Time.time;
+            phaseEndsAt = Time.time + disappearanceDuration;
+        }
+
         private void SetDestination(Vector3 destination)
         {
             if (!navigationAgent.enabled)
@@ -411,8 +625,16 @@ namespace HorseParking.Presentation.Construction
                 return false;
             }
 
-            return navigationAgent.remainingDistance <= navigationAgent.stoppingDistance + 0.03f
-                   && (!navigationAgent.hasPath || navigationAgent.velocity.sqrMagnitude < 0.01f);
+            var planarOffset = navigationAgent.destination - transform.position;
+            planarOffset.y = 0f;
+            var arrivalRadius = Mathf.Max(
+                navigationAgent.stoppingDistance + 0.03f,
+                navigationAgent.radius + 0.08f);
+            return planarOffset.sqrMagnitude <= arrivalRadius * arrivalRadius
+                   || (navigationAgent.remainingDistance
+                       <= navigationAgent.stoppingDistance + 0.03f
+                       && (!navigationAgent.hasPath
+                           || navigationAgent.velocity.sqrMagnitude < 0.01f));
         }
 
         private static bool TrySamplePoint(
@@ -560,7 +782,9 @@ namespace HorseParking.Presentation.Construction
             Emerging,
             WalkingToBuild,
             Building,
-            WalkingToExit,
+            WalkingToScatter,
+            Wandering,
+            WalkingToVortex,
             Disappearing,
             Exited
         }

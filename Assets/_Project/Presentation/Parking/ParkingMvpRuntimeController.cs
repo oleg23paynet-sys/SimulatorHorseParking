@@ -1,3 +1,4 @@
+using System;
 using HorseParking.Core.Parking;
 using HorseParking.Presentation.Composition;
 using UnityEngine;
@@ -29,10 +30,23 @@ namespace HorseParking.Presentation.Parking
         private int collectedGold;
         private double parkedAtSeconds;
         private double paymentApproachStartedAtSeconds;
+        private double nextClientArrivalAtSeconds;
+        private bool waitingForNextClient;
+        private ParkingClientArchetype? currentArchetype;
 
         public bool CanCollectPayment => initialized && paymentRequested && !paymentCollected;
 
         public bool CanOpenExit => initialized && paymentCollected && collectedGold > 0 && !exitStarted;
+        public bool CanTalkToClient =>
+            initialized
+            && clientParked
+            && !waitingForNextClient
+            && !exitStarted
+            && currentArchetype != null
+            && clientVisual.activeInHierarchy;
+        public ParkingClientArchetype? CurrentArchetype => currentArchetype;
+        public event Action<ParkingClientArchetype>? ClientArchetypeChanged;
+        public event Action<ParkingClientArchetype, ParkingClientDialogueMoment>? ClientDialogueRequested;
 
         public void Configure(GameCompositionRoot root, GameObject client, GameObject sack, MountedClientRoutePresenter route, Transform bagAnchor, RiderParkingSequencePresenter sequence)
         {
@@ -65,23 +79,36 @@ namespace HorseParking.Presentation.Parking
 
             routePresenter.BindCallbacks(NotifyClientParked, NotifyClientAtPaymentGate, NotifyClientExited);
             riderSequence.BindReadyForDeparture(NotifyRiderReadyForDeparture);
+            SelectNextArchetype();
             routePresenter.BeginArrival();
+            RequestDialogue(ParkingClientDialogueMoment.Arriving);
             Debug.Log("Parking: client is arriving.");
         }
 
         private void Update()
         {
+            if (waitingForNextClient)
+            {
+                if (compositionRoot.GameClock.ElapsedSeconds >= nextClientArrivalAtSeconds)
+                {
+                    BeginNextClient();
+                }
+                return;
+            }
+
             if (!initialized || !clientParked || !riderReadyForDeparture || paymentRequested)
             {
                 return;
             }
 
             var elapsed = compositionRoot.GameClock.ElapsedSeconds;
-            if (!approachingPayment && elapsed - parkedAtSeconds >= paymentReadyAfterSeconds)
+            var visitSeconds = currentArchetype?.ParkingDurationSeconds ?? paymentReadyAfterSeconds;
+            if (!approachingPayment && elapsed - parkedAtSeconds >= visitSeconds)
             {
                 approachingPayment = true;
                 paymentApproachStartedAtSeconds = elapsed;
                 routePresenter.BeginPaymentApproach();
+                RequestDialogue(ParkingClientDialogueMoment.Returning);
                 Debug.Log("Parking: client returned to the exit gate with payment.");
                 return;
             }
@@ -97,7 +124,16 @@ namespace HorseParking.Presentation.Parking
 
         public bool TryCollectPayment()
         {
-            if (!CanCollectPayment || !compositionRoot.ParkingLifecycleUseCase.TryCollectPayment(out var payment))
+            if (!CanCollectPayment)
+            {
+                return false;
+            }
+
+            ParkingPayment payment;
+            var collected = currentArchetype != null
+                ? compositionRoot.ParkingLifecycleUseCase.TryCollectPayment(currentArchetype.Tariff, out payment)
+                : compositionRoot.ParkingLifecycleUseCase.TryCollectPayment(out payment);
+            if (!collected)
             {
                 return false;
             }
@@ -114,6 +150,7 @@ namespace HorseParking.Presentation.Parking
             }
 
             paymentSackVisual.SetActive(false);
+            RequestDialogue(ParkingClientDialogueMoment.PaymentReceived);
             Debug.Log("Parking: collected " + payment.Gold + " gold. Go to the exit gate and left-click it.");
             return true;
         }
@@ -126,14 +163,27 @@ namespace HorseParking.Presentation.Parking
             }
 
             exitStarted = true;
+            RequestDialogue(ParkingClientDialogueMoment.Leaving);
             routePresenter.BeginExit();
             Debug.Log("Parking: gate opened; client is leaving.");
             return true;
         }
 
+        public bool TryTalkToClient()
+        {
+            if (!CanTalkToClient)
+                return false;
+
+            RequestDialogue(ParkingClientDialogueMoment.PlayerGreeting);
+            return true;
+        }
+
         public void NotifyClientParked()
         {
-            if (!compositionRoot.ParkingLifecycleUseCase.TryPark("client-mounted-01"))
+            var clientId = currentArchetype != null
+                ? "client-" + currentArchetype.Id
+                : "client-mounted-01";
+            if (!compositionRoot.ParkingLifecycleUseCase.TryPark(clientId))
             {
                 Debug.LogError("Parking MVP could not park the arriving client.", this);
                 return;
@@ -142,6 +192,7 @@ namespace HorseParking.Presentation.Parking
             riderReadyForDeparture = false;
             parkedAtSeconds = compositionRoot.GameClock.ElapsedSeconds;
             riderSequence.BeginParkingVisit();
+            RequestDialogue(ParkingClientDialogueMoment.Parked);
             Debug.Log("Parking: horse is parked; rider is dismounting and leaving on foot.");
         }
 
@@ -170,6 +221,7 @@ namespace HorseParking.Presentation.Parking
             paymentSackVisual.transform.localRotation = Quaternion.identity;
             paymentSackVisual.transform.localScale = Vector3.one;
             paymentSackVisual.SetActive(true);
+            RequestDialogue(ParkingClientDialogueMoment.WaitingForPayment);
             Debug.Log("Parking: payment bag is at the horse. Look at it and left-click.");
         }
 
@@ -181,7 +233,48 @@ namespace HorseParking.Presentation.Parking
                 return;
             }
             clientVisual.SetActive(false);
+            waitingForNextClient = true;
+            nextClientArrivalAtSeconds = compositionRoot.GameClock.ElapsedSeconds
+                                         + compositionRoot.ClientRespawnDelaySeconds;
             Debug.Log("Parking: client left. Slot is free.");
+        }
+
+        private void SelectNextArchetype()
+        {
+            if (!compositionRoot.HasParkingClientArchetypes)
+            {
+                return;
+            }
+
+            currentArchetype = compositionRoot.ParkingClientArchetypeSelectionUseCase.SelectNext();
+            ClientArchetypeChanged?.Invoke(currentArchetype);
+        }
+
+        private void BeginNextClient()
+        {
+            waitingForNextClient = false;
+            paymentRequested = false;
+            approachingPayment = false;
+            paymentCollected = false;
+            clientParked = false;
+            riderReadyForDeparture = false;
+            exitStarted = false;
+            collectedGold = 0;
+            paymentSackVisual.SetActive(false);
+            routePresenter.ResetToSpawn();
+            SelectNextArchetype();
+            clientVisual.SetActive(true);
+            routePresenter.BeginArrival();
+            RequestDialogue(ParkingClientDialogueMoment.Arriving);
+            Debug.Log("Parking: next client archetype is arriving.");
+        }
+
+        private void RequestDialogue(ParkingClientDialogueMoment moment)
+        {
+            if (currentArchetype == null || !compositionRoot.HasParkingClientDialogue)
+                return;
+
+            ClientDialogueRequested?.Invoke(currentArchetype, moment);
         }
     }
 }

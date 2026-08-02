@@ -120,7 +120,10 @@ namespace HorseParking.Presentation.Construction
                     }
                 }
 
-                useCase.AdvanceConstruction(Time.deltaTime, activeWorkerCount);
+                var economyMultiplier = compositionRoot.HasParkingEconomy
+                    ? compositionRoot.ParkingEconomyUseCase.ConstructionSpeedMultiplier
+                    : 1d;
+                useCase.AdvanceConstruction(Time.deltaTime * economyMultiplier, activeWorkerCount);
             }
             else if (state == ConstructionState.Completed
                      && workersRoot.activeSelf

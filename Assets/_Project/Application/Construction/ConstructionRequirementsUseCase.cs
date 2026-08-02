@@ -100,7 +100,9 @@ namespace HorseParking.Application.Construction
 
         private readonly ConstructionProject project;
         private readonly LogisticsInventoryUseCase inventoryUseCase;
-        private double constructionSpeedMultiplier = 1d;
+        private double workerHitSpeedMultiplier = 1d;
+        private double workerHitBoostRemainingSeconds;
+        private double workerHitCooldownRemainingSeconds;
 
         public event Action? ConstructionStarted;
         public event Action? ConstructionProgressChanged;
@@ -188,7 +190,9 @@ namespace HorseParking.Application.Construction
                 throw new InvalidOperationException("Construction state changed after atomic resource consumption.");
             }
 
-            constructionSpeedMultiplier = 1d;
+            workerHitSpeedMultiplier = 1d;
+            workerHitBoostRemainingSeconds = 0d;
+            workerHitCooldownRemainingSeconds = 0d;
             ConstructionStarted?.Invoke();
             ConstructionProgressChanged?.Invoke();
             return ConstructionStartResult.Success();
@@ -201,11 +205,24 @@ namespace HorseParking.Application.Construction
         /// </summary>
         public void AdvanceConstruction(double deltaSeconds, int activeWorkerCount)
         {
-            if (deltaSeconds <= 0d || activeWorkerCount <= 0) return;
+            if (deltaSeconds <= 0d) return;
+
+            workerHitBoostRemainingSeconds = Math.Max(
+                0d,
+                workerHitBoostRemainingSeconds - deltaSeconds);
+            workerHitCooldownRemainingSeconds = Math.Max(
+                0d,
+                workerHitCooldownRemainingSeconds - deltaSeconds);
+            if (workerHitBoostRemainingSeconds <= 0d)
+            {
+                workerHitSpeedMultiplier = 1d;
+            }
+
+            if (activeWorkerCount <= 0) return;
 
             var wasCompleted = project.State == ConstructionState.Completed;
             var workerContribution = activeWorkerCount * BuildSpeedPerActiveWorker;
-            if (!project.Advance(deltaSeconds * workerContribution * constructionSpeedMultiplier)) return;
+            if (!project.Advance(deltaSeconds * workerContribution * workerHitSpeedMultiplier)) return;
 
             ConstructionProgressChanged?.Invoke();
             if (!wasCompleted && project.State == ConstructionState.Completed)
@@ -215,14 +232,31 @@ namespace HorseParking.Application.Construction
         }
 
         /// <summary>
-        /// Applies a persistent construction-speed multiplier for the active build.
-        /// Presentation decides how a hit is detected; the application layer owns its effect.
+        /// Applies a temporary worker-hit boost while keeping its cooldown in the
+        /// application layer. Presentation owns only input and visual feedback.
         /// </summary>
-        public bool ApplyWorkerHitSpeedMultiplier(double speedMultiplier)
+        public bool TryApplyWorkerHitSpeedBoost(
+            double speedMultiplier,
+            double durationSeconds,
+            double cooldownSeconds)
         {
-            if (project.State != ConstructionState.InProgress || speedMultiplier <= 1d) return false;
-            constructionSpeedMultiplier = Math.Max(constructionSpeedMultiplier, speedMultiplier);
+            if (project.State != ConstructionState.InProgress
+                || speedMultiplier <= 1d
+                || durationSeconds <= 0d
+                || cooldownSeconds < durationSeconds
+                || workerHitCooldownRemainingSeconds > 0d)
+            {
+                return false;
+            }
+
+            workerHitSpeedMultiplier = speedMultiplier;
+            workerHitBoostRemainingSeconds = durationSeconds;
+            workerHitCooldownRemainingSeconds = cooldownSeconds;
             return true;
         }
+
+        public bool CanApplyWorkerHitSpeedBoost =>
+            project.State == ConstructionState.InProgress
+            && workerHitCooldownRemainingSeconds <= 0d;
     }
 }

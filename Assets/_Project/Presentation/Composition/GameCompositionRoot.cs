@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using HorseParking.Application.Construction;
+using HorseParking.Application.Economy;
 using HorseParking.Application.Interaction;
 using HorseParking.Application.Logistics;
 using HorseParking.Application.Parking;
@@ -14,7 +15,9 @@ using HorseParking.Infrastructure.Randomness;
 using HorseParking.Infrastructure.Time;
 using HorseParking.Presentation.Logistics;
 using HorseParking.Presentation.Construction;
+using HorseParking.Presentation.Economy;
 using HorseParking.Presentation.Localization;
+using HorseParking.Presentation.Parking;
 using UnityEngine;
 
 namespace HorseParking.Presentation.Composition
@@ -33,10 +36,16 @@ namespace HorseParking.Presentation.Composition
         private LogisticsInventoryUseCase? logisticsInventoryUseCase;
         private CartJourneyUseCase? cartJourneyUseCase;
         private ConstructionRequirementsUseCase? constructionRequirementsUseCase;
+        private ParkingEconomyUseCase? parkingEconomyUseCase;
+        private ParkingClientArchetypeSelectionUseCase? parkingClientArchetypeSelectionUseCase;
+        private ParkingClientDialogueUseCase? parkingClientDialogueUseCase;
 
         [SerializeField] private LogisticsInventorySettings? logisticsInventorySettings;
         [SerializeField] private GameLocalizationSettings? localizationSettings;
         [SerializeField] private ConstructionRequirementsSettings? constructionRequirementsSettings;
+        [SerializeField] private ParkingEconomySettings? parkingEconomySettings;
+        [SerializeField] private ParkingClientArchetypeSettings? parkingClientArchetypeSettings;
+        [SerializeField] private ParkingClientDialogueSettings? parkingClientDialogueSettings;
 
         public ILocalizationService LocalizationService => localizationService;
 
@@ -65,6 +74,25 @@ namespace HorseParking.Presentation.Composition
         public ConstructionRequirementsUseCase ConstructionRequirementsUseCase => constructionRequirementsUseCase
             ?? throw new System.InvalidOperationException("Construction requirements are not configured in the Composition Root.");
 
+        public bool HasParkingEconomy => parkingEconomyUseCase != null;
+
+        public ParkingEconomyUseCase ParkingEconomyUseCase => parkingEconomyUseCase
+            ?? throw new System.InvalidOperationException("Parking economy is not configured in the Composition Root.");
+
+        public bool HasParkingClientArchetypes => parkingClientArchetypeSelectionUseCase != null;
+
+        public ParkingClientArchetypeSelectionUseCase ParkingClientArchetypeSelectionUseCase =>
+            parkingClientArchetypeSelectionUseCase
+            ?? throw new System.InvalidOperationException("Parking client archetypes are not configured.");
+
+        public double ClientRespawnDelaySeconds => parkingClientArchetypeSettings?.DelayBetweenClientsSeconds ?? 3d;
+
+        public bool HasParkingClientDialogue => parkingClientDialogueUseCase != null;
+
+        public ParkingClientDialogueUseCase ParkingClientDialogueUseCase =>
+            parkingClientDialogueUseCase
+            ?? throw new System.InvalidOperationException("Parking client dialogue is not configured.");
+
         public void ConfigureLogisticsInventory(LogisticsInventorySettings settings)
         {
             logisticsInventorySettings = settings;
@@ -80,6 +108,21 @@ namespace HorseParking.Presentation.Composition
             constructionRequirementsSettings = settings;
         }
 
+        public void ConfigureParkingEconomy(ParkingEconomySettings settings)
+        {
+            parkingEconomySettings = settings;
+        }
+
+        public void ConfigureParkingClientArchetypes(ParkingClientArchetypeSettings settings)
+        {
+            parkingClientArchetypeSettings = settings;
+        }
+
+        public void ConfigureParkingClientDialogue(ParkingClientDialogueSettings settings)
+        {
+            parkingClientDialogueSettings = settings;
+        }
+
         private void Awake()
         {
             ConfigureServices();
@@ -92,9 +135,19 @@ namespace HorseParking.Presentation.Composition
                 : new DictionaryLocalizationService("en", new Dictionary<string, string>());
             gameClock = new StopwatchGameClock();
             randomSource = new SeededRandomSource(12345);
+            parkingClientArchetypeSelectionUseCase = parkingClientArchetypeSettings != null
+                ? parkingClientArchetypeSettings.CreateUseCase(randomSource)
+                : null;
+            parkingClientDialogueUseCase = parkingClientDialogueSettings != null
+                ? parkingClientDialogueSettings.CreateUseCase(randomSource)
+                : null;
             interactWithTargetUseCase = new InteractWithTargetUseCase();
             var parkingSlot = new ParkingSlot("parking-slot-01");
-            var tariff = new ParkingTariff(billingPeriodSeconds: 20d, goldPerPeriod: 3);
+            var tariff = parkingEconomySettings != null
+                ? new ParkingTariff(
+                    parkingEconomySettings.BillingPeriodSeconds,
+                    parkingEconomySettings.GoldPerBillingPeriod)
+                : new ParkingTariff(billingPeriodSeconds: 20d, goldPerPeriod: 3);
             parkingLifecycleUseCase = new ParkingLifecycleUseCase(parkingSlot, tariff, gameClock);
             if (logisticsInventorySettings != null)
             {
@@ -102,12 +155,16 @@ namespace HorseParking.Presentation.Composition
                 constructionRequirementsUseCase = constructionRequirementsSettings != null
                     ? constructionRequirementsSettings.CreateUseCase(logisticsInventoryUseCase)
                     : null;
+                parkingEconomyUseCase = parkingEconomySettings != null
+                    ? parkingEconomySettings.CreateUseCase(logisticsInventoryUseCase)
+                    : null;
             }
             else
             {
                 logisticsInventoryUseCase = null;
                 cartJourneyUseCase = null;
                 constructionRequirementsUseCase = null;
+                parkingEconomyUseCase = null;
             }
         }
     }

@@ -2,6 +2,7 @@ using System.Linq;
 using System.Collections.Generic;
 using HorseParking.Presentation.Composition;
 using HorseParking.Presentation.Construction;
+using HorseParking.Presentation.Economy;
 using HorseParking.Presentation.Logistics;
 using HorseParking.Presentation.Localization;
 using HorseParking.Presentation.Player;
@@ -26,6 +27,9 @@ namespace HorseParking.Presentation.Editor
         private const string LogisticsInventorySettingsPath = "Assets/_Project/Settings/LogisticsInventorySettings.asset";
         private const string GameLocalizationSettingsPath = "Assets/_Project/Settings/GameLocalizationSettings.asset";
         private const string ConstructionRequirementsSettingsPath = "Assets/_Project/Settings/ConstructionRequirementsSettings.asset";
+        private const string ParkingEconomySettingsPath = "Assets/_Project/Settings/ParkingEconomySettings.asset";
+        private const string ParkingClientArchetypeSettingsPath = "Assets/_Project/Settings/ParkingClientArchetypeSettings.asset";
+        private const string ParkingClientDialogueSettingsPath = "Assets/_Project/Settings/ParkingClientDialogueSettings.asset";
         private const string ConstructionSignModelPath = "Assets/_Project/Content/Models/Props/ConstructionSign/SM_ConstructionSign.fbx";
         private const string ConstructionSignTexturePath = "Assets/_Project/Content/Models/Props/ConstructionSign/Textures/T_ConstructionSign_BaseColor.jpeg";
         private const string ConstructionSignMaterialPath = "Assets/_Project/Content/Models/Props/ConstructionSign/Materials/M_ConstructionSign.mat";
@@ -125,11 +129,18 @@ namespace HorseParking.Presentation.Editor
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             CreateLighting();
             var compositionRoot = new GameObject("GameCompositionRoot").AddComponent<GameCompositionRoot>();
+            EnsureStage4Translations(LoadOrCreateGameLocalizationSettings());
+            EnsureStage51Translations(LoadOrCreateGameLocalizationSettings());
+            EnsureStage52Translations(LoadOrCreateGameLocalizationSettings());
             compositionRoot.ConfigureLogisticsInventory(LoadOrCreateLogisticsInventorySettings());
             compositionRoot.ConfigureLocalization(LoadOrCreateGameLocalizationSettings());
             compositionRoot.ConfigureConstructionRequirements(LoadOrCreateConstructionRequirementsSettings());
+            compositionRoot.ConfigureParkingEconomy(LoadOrCreateParkingEconomySettings());
+            compositionRoot.ConfigureParkingClientArchetypes(LoadOrCreateParkingClientArchetypeSettings());
+            compositionRoot.ConfigureParkingClientDialogue(LoadOrCreateParkingClientDialogueSettings());
             var playerController = CreatePlayer(compositionRoot);
             CreateLogisticsInventoryHud(compositionRoot);
+            CreateParkingEconomyHud(compositionRoot, playerController);
             CreateGround();
             var parkingRouteObstacles = CreateParkingZone();
             var client = CreateClient(
@@ -150,6 +161,16 @@ namespace HorseParking.Presentation.Editor
                 exitAndPayment.gate,
                 exitAndPayment.sack,
                 parkingRouteObstacles);
+            CreateParkingClientArchetypeHud(
+                compositionRoot,
+                Object.FindAnyObjectByType<ParkingMvpRuntimeController>()
+                ?? throw new System.InvalidOperationException("ParkingMvpRuntime was not created."));
+            CreateParkingClientDialogue(
+                compositionRoot,
+                Object.FindAnyObjectByType<ParkingMvpRuntimeController>()
+                ?? throw new System.InvalidOperationException("ParkingMvpRuntime was not created."),
+                riderRoot,
+                LoadOrCreateParkingClientDialogueSettings());
             var operationsBuildings = CreateOperationsBuildings();
             CreateStage32Logistics(
                 compositionRoot,
@@ -168,6 +189,92 @@ namespace HorseParking.Presentation.Editor
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
             Debug.Log("Parking MVP scene created at " + ScenePath);
+        }
+
+        [MenuItem("Horse Parking/Install Stage 4 Economy")]
+        public static void InstallStage4Economy()
+        {
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            var compositionRoot = Object.FindAnyObjectByType<GameCompositionRoot>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing GameCompositionRoot.");
+            var economySettings = LoadOrCreateParkingEconomySettings();
+            var localizationSettings = LoadOrCreateGameLocalizationSettings();
+            var playerController = Object.FindAnyObjectByType<FirstPersonPlayerController>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing FirstPersonPlayerController.");
+
+            EnsureStage4Translations(localizationSettings);
+            compositionRoot.ConfigureParkingEconomy(economySettings);
+            compositionRoot.ConfigureLocalization(localizationSettings);
+            CreateParkingEconomyHud(compositionRoot, playerController);
+
+            EditorUtility.SetDirty(compositionRoot);
+            EditorUtility.SetDirty(economySettings);
+            EditorUtility.SetDirty(localizationSettings);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Stage 4 economy installed in " + ScenePath);
+        }
+
+        [MenuItem("Horse Parking/Install Stage 5.1 Client Archetypes")]
+        public static void InstallStage51ClientArchetypes()
+        {
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            var compositionRoot = Object.FindAnyObjectByType<GameCompositionRoot>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing GameCompositionRoot.");
+            var runtime = Object.FindAnyObjectByType<ParkingMvpRuntimeController>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing ParkingMvpRuntimeController.");
+            var playerController = Object.FindAnyObjectByType<FirstPersonPlayerController>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing FirstPersonPlayerController.");
+            var clientSettings = LoadOrCreateParkingClientArchetypeSettings();
+            var localizationSettings = LoadOrCreateGameLocalizationSettings();
+
+            EnsureStage4Translations(localizationSettings);
+            EnsureStage51Translations(localizationSettings);
+            compositionRoot.ConfigureLocalization(localizationSettings);
+            compositionRoot.ConfigureParkingClientArchetypes(clientSettings);
+            CreateParkingEconomyHud(compositionRoot, playerController);
+            CreateParkingClientArchetypeHud(compositionRoot, runtime);
+
+            EditorUtility.SetDirty(compositionRoot);
+            EditorUtility.SetDirty(clientSettings);
+            EditorUtility.SetDirty(localizationSettings);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Stage 5.1 client archetypes and the M tutorial were installed in " + ScenePath);
+        }
+
+        [MenuItem("Horse Parking/Install Stage 5.2 NPC Dialogue")]
+        public static void InstallStage52NpcDialogue()
+        {
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            var compositionRoot = Object.FindAnyObjectByType<GameCompositionRoot>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing GameCompositionRoot.");
+            var runtime = Object.FindAnyObjectByType<ParkingMvpRuntimeController>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing ParkingMvpRuntimeController.");
+            var riderRoot = GameObject.Find("ClientRider_01")?.transform
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing ClientRider_01.");
+            var dialogueSettings = LoadOrCreateParkingClientDialogueSettings();
+            var localizationSettings = LoadOrCreateGameLocalizationSettings();
+
+            EnsureStage51Translations(localizationSettings);
+            EnsureStage52Translations(localizationSettings);
+            compositionRoot.ConfigureLocalization(localizationSettings);
+            compositionRoot.ConfigureParkingClientDialogue(dialogueSettings);
+            CreateParkingClientDialogue(
+                compositionRoot,
+                runtime,
+                riderRoot,
+                dialogueSettings);
+
+            EditorUtility.SetDirty(compositionRoot);
+            EditorUtility.SetDirty(dialogueSettings);
+            EditorUtility.SetDirty(localizationSettings);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Stage 5.2 localized NPC dialogue and reactions were installed in " + ScenePath);
         }
 
         [MenuItem("Horse Parking/Install Stage 3.1 Inventory")]
@@ -420,6 +527,38 @@ namespace HorseParking.Presentation.Editor
             Debug.Log("Stage 3.6 construction process installed in " + ScenePath);
         }
 
+        [MenuItem("Horse Parking/Rollback Stage 3.7 Second Client")]
+        public static void RollbackStage37SecondClient()
+        {
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            if (GameObject.Find("Stage36_ConstructionProcess") == null)
+            {
+                throw new System.InvalidOperationException(
+                    "Stage 3.6 construction root is missing; rollback stopped to protect the construction result.");
+            }
+
+            var stage37Root = GameObject.Find("Stage37_BuiltParkingSlot");
+            if (stage37Root != null)
+            {
+                Object.DestroyImmediate(stage37Root);
+            }
+
+            RepairParkingClientControllerReferences();
+            var primaryRuntime = GameObject.Find("ParkingMvpRuntime")?.GetComponent<ParkingMvpRuntimeController>()
+                ?? throw new System.InvalidOperationException("Primary parking runtime is missing.");
+            var gate = GameObject.Find("ExitGate_01")
+                ?? throw new System.InvalidOperationException("Primary parking exit gate is missing.");
+            var gateTarget = gate.GetComponent<ParkingExitGateInteractionTarget>()
+                ?? gate.AddComponent<ParkingExitGateInteractionTarget>();
+            gateTarget.Configure(primaryRuntime);
+
+            EditorUtility.SetDirty(gateTarget);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Stage 3.7 second client removed; Stage 3.6 construction remains in " + ScenePath);
+        }
+
         [MenuItem("Horse Parking/Install Payment Money Bag Presentation")]
         public static void InstallPaymentMoneyBagPresentation()
         {
@@ -585,6 +724,12 @@ namespace HorseParking.Presentation.Editor
         {
             EnsureFolder("Assets/_Project/Presentation/Animation");
             EnsureFolder("Assets/_Project/Presentation/Animation/Controllers");
+            var existing = AssetDatabase.LoadAssetAtPath<AnimatorController>(HorseAnimsetControllerPath);
+            if (existing != null)
+            {
+                return existing;
+            }
+
             AssetDatabase.DeleteAsset(HorseAnimsetControllerPath);
             var controller = AnimatorController.CreateAnimatorControllerAtPath(HorseAnimsetControllerPath);
             controller.AddParameter("Walking", AnimatorControllerParameterType.Bool);
@@ -670,7 +815,6 @@ namespace HorseParking.Presentation.Editor
         private static Material CreateHorseAnimsetMaterial(string name, Color color, Texture2D albedo, Texture2D normal, Texture2D metallic)
         {
             var path = HorseAnimsetMaterialFolder + "/" + name + ".mat";
-            AssetDatabase.DeleteAsset(path);
             // ParkingMvp currently uses the Built-in Render Pipeline. Selecting the
             // installed-but-inactive URP shader would render the horse magenta.
             var shader = Shader.Find("Standard");
@@ -678,7 +822,17 @@ namespace HorseParking.Presentation.Editor
             {
                 throw new System.InvalidOperationException("Built-in Standard shader is unavailable.");
             }
-            var material = new Material(shader) { name = name };
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(shader) { name = name };
+                AssetDatabase.CreateAsset(material, path);
+            }
+            else
+            {
+                material.shader = shader;
+            }
+
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
             if (material.HasProperty("_Color")) material.SetColor("_Color", color);
             if (albedo != null)
@@ -697,7 +851,7 @@ namespace HorseParking.Presentation.Editor
                 material.EnableKeyword("_METALLICSPECGLOSSMAP");
             }
             if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.32f);
-            AssetDatabase.CreateAsset(material, path);
+            EditorUtility.SetDirty(material);
             return material;
         }
 
@@ -815,6 +969,12 @@ namespace HorseParking.Presentation.Editor
         {
             EnsureFolder("Assets/_Project/Presentation/Animation");
             EnsureFolder("Assets/_Project/Presentation/Animation/Controllers");
+            var existing = AssetDatabase.LoadAssetAtPath<AnimatorController>(HorseAnimsetRiderControllerPath);
+            if (existing != null)
+            {
+                return existing;
+            }
+
             AssetDatabase.DeleteAsset(HorseAnimsetRiderControllerPath);
             var controller = AnimatorController.CreateAnimatorControllerAtPath(HorseAnimsetRiderControllerPath);
             controller.AddParameter("Walking", AnimatorControllerParameterType.Bool);
@@ -874,6 +1034,63 @@ namespace HorseParking.Presentation.Editor
             mountComplete.duration = 0.05f;
             AssetDatabase.SaveAssets();
             return controller;
+        }
+
+        private static void RepairParkingClientControllerReferences()
+        {
+            var horseController = AssetDatabase.LoadAssetAtPath<AnimatorController>(HorseAnimsetControllerPath)
+                ?? throw new System.InvalidOperationException("Parking horse controller is missing.");
+            var riderController = AssetDatabase.LoadAssetAtPath<AnimatorController>(HorseAnimsetRiderControllerPath)
+                ?? throw new System.InvalidOperationException("Parking rider controller is missing.");
+            foreach (var clientName in new[] { "ClientMountedHorseRider_01" })
+            {
+                var client = GameObject.Find(clientName);
+                if (client == null)
+                {
+                    continue;
+                }
+
+                var horse = FindDescendant(client.transform, "HorseAnimsetPro_Visual");
+                if (horse != null)
+                {
+                    ConfigureHorseAnimsetRenderers(horse.gameObject);
+                    var animator = horse.GetComponent<Animator>();
+                    if (animator != null)
+                    {
+                        animator.runtimeAnimatorController = horseController;
+                        animator.applyRootMotion = false;
+                        EditorUtility.SetDirty(animator);
+                    }
+                }
+
+                var rider = FindDescendant(client.transform, "ClientRider_01");
+                if (rider != null)
+                {
+                    var riderMaterial = CreateHorseAnimsetMaterial(
+                        "M_HAP_Rider",
+                        Color.white,
+                        AssetDatabase.LoadAssetAtPath<Texture2D>(HorseAnimsetRiderAlbedoPath),
+                        AssetDatabase.LoadAssetAtPath<Texture2D>(HorseAnimsetRiderNormalPath),
+                        AssetDatabase.LoadAssetAtPath<Texture2D>(HorseAnimsetRiderSpecularPath));
+                    foreach (var renderer in rider.GetComponentsInChildren<Renderer>(true))
+                    {
+                        renderer.enabled = !renderer.name.StartsWith("Pistol");
+                        if (renderer.enabled)
+                        {
+                            renderer.sharedMaterial = riderMaterial;
+                            EditorUtility.SetDirty(renderer);
+                        }
+                    }
+
+                    var animator = rider.GetComponent<Animator>();
+                    if (animator != null)
+                    {
+                        animator.runtimeAnimatorController = riderController;
+                        animator.applyRootMotion = true;
+                        EditorUtility.SetDirty(animator);
+                    }
+                }
+            }
         }
 
         private static Transform CreatePaymentBagAnchor(GameObject horseVisual)
@@ -1232,13 +1449,21 @@ namespace HorseParking.Presentation.Editor
             riderDismountPoint.transform.position = new Vector3(-1.15f, groundSurfaceY, -1f);
             riderDismountPoint.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
             var riderLanePoint = new GameObject("RiderOpenLanePoint_01");
-            // Centre of the unobstructed entrance between the two side fences.
             riderLanePoint.transform.position = new Vector3(0f, groundSurfaceY, -3.35f);
             riderLanePoint.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
             var riderAwayPoint = new GameObject("RiderAwayPoint_01");
             riderAwayPoint.transform.position = new Vector3(-4.5f, groundSurfaceY, -4.5f);
             var route = client.AddComponent<MountedClientRoutePresenter>();
-            route.Configure(client.transform, entryLanePoint.transform, parkingPoint.transform, paymentPoint.transform, exitPoint.transform, animationAdapter, runtime.NotifyClientParked, runtime.NotifyClientAtPaymentGate, runtime.NotifyClientExited);
+            route.Configure(
+                client.transform,
+                entryLanePoint.transform,
+                parkingPoint.transform,
+                paymentPoint.transform,
+                exitPoint.transform,
+                animationAdapter,
+                runtime.NotifyClientParked,
+                runtime.NotifyClientAtPaymentGate,
+                runtime.NotifyClientExited);
             var riderSequence = riderRoot.gameObject.AddComponent<RiderParkingSequencePresenter>();
             var dismountClip = LoadHorseAnimsetClip(HorseAnimsetRiderMountDismountPath, "Rider_Dismount_Left");
             var mountClip = LoadHorseAnimsetClip(HorseAnimsetRiderMountDismountPath, "Rider_Mount_Left");
@@ -1260,11 +1485,18 @@ namespace HorseParking.Presentation.Editor
                 parkingRouteObstacles.Concat(gate.GetComponentsInChildren<Collider>(true)).ToArray(),
                 dismountClip.length + 0.12f,
                 mountClip.length + 0.12f);
-            runtime.Configure(compositionRoot, client, sack, route, paymentBagAnchor, riderSequence);
+            runtime.Configure(
+                compositionRoot,
+                client,
+                sack,
+                route,
+                paymentBagAnchor,
+                riderSequence);
 
             var sackTarget = sack.AddComponent<ParkingPaymentBagInteractionTarget>();
             sackTarget.Configure(runtime);
-            var gateTarget = gate.AddComponent<ParkingExitGateInteractionTarget>();
+            var gateTarget = gate.GetComponent<ParkingExitGateInteractionTarget>()
+                ?? gate.AddComponent<ParkingExitGateInteractionTarget>();
             gateTarget.Configure(runtime);
         }
 
@@ -2535,16 +2767,25 @@ namespace HorseParking.Presentation.Editor
                 workerImporter.SaveAndReimport();
             }
 
-            var worker = (GameObject)PrefabUtility.InstantiatePrefab(workerAsset);
-            worker.name = name;
             var initialSpawnPoint = spawnPoints[preferredSpawnPointIndex % spawnPoints.Length];
-            worker.transform.position = initialSpawnPoint.position;
-            worker.transform.rotation = Quaternion.LookRotation(
-                workPoint.position - initialSpawnPoint.position,
-                Vector3.up);
-            ScaleToHeight(worker, 1.15f);
-            PlaceBaseAtHeight(worker, initialSpawnPoint.position.y);
+            var worker = new GameObject(name);
             worker.transform.SetParent(parent, true);
+            worker.transform.SetPositionAndRotation(
+                initialSpawnPoint.position,
+                Quaternion.LookRotation(
+                workPoint.position - initialSpawnPoint.position,
+                Vector3.up));
+
+            // Navigation stays on a stable ground-level actor root. Only this visual
+            // child rises and spins during the vortex sequence.
+            var workerVisual = (GameObject)PrefabUtility.InstantiatePrefab(workerAsset);
+            workerVisual.name = name + "_Visual";
+            workerVisual.transform.SetPositionAndRotation(
+                worker.transform.position,
+                worker.transform.rotation);
+            ScaleToHeight(workerVisual, 1.15f);
+            PlaceBaseAtHeight(workerVisual, initialSpawnPoint.position.y);
+            workerVisual.transform.SetParent(worker.transform, true);
 
             var hammer = (GameObject)PrefabUtility.InstantiatePrefab(hammerAsset);
             hammer.name = name + "_Hammer";
@@ -2555,7 +2796,8 @@ namespace HorseParking.Presentation.Editor
             {
                 renderer.sharedMaterial = hammerMaterial;
             }
-            var animator = worker.GetComponentInChildren<Animator>() ?? worker.AddComponent<Animator>();
+            var animator = workerVisual.GetComponentInChildren<Animator>()
+                ?? workerVisual.AddComponent<Animator>();
             var workerAvatar = AssetDatabase.LoadAllAssetsAtPath(ConstructionWorkerAvatarPath)
                 .OfType<Avatar>()
                 .FirstOrDefault(avatar => avatar.isValid && avatar.isHuman)
@@ -2586,7 +2828,7 @@ namespace HorseParking.Presentation.Editor
             hitCollider.direction = 1;
             var interactionRadius = worker.AddComponent<SphereCollider>();
             interactionRadius.center = new Vector3(0f, 0.58f, 0f);
-            interactionRadius.radius = 2.5f;
+            interactionRadius.radius = 5f;
             interactionRadius.isTrigger = true;
             var hitEffectObject = new GameObject(name + "_HitEffect", typeof(ParticleSystem));
             hitEffectObject.transform.SetParent(worker.transform, false);
@@ -2637,6 +2879,7 @@ namespace HorseParking.Presentation.Editor
             motion.Configure(
                 animator,
                 navigationAgent,
+                workerVisual.transform,
                 hammer,
                 groundVortex,
                 spawnPoints,
@@ -2656,16 +2899,26 @@ namespace HorseParking.Presentation.Editor
             var vortexAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ConstructionGoblinSpawnVfxPath)
                 ?? throw new System.InvalidOperationException(
                     "Ready-made goblin spawn VFX is missing: " + ConstructionGoblinSpawnVfxPath);
-            var effectObject = (GameObject)PrefabUtility.InstantiatePrefab(vortexAsset);
-            effectObject.name = workerName + "_GroundVortex";
-            effectObject.transform.SetParent(worker, false);
-            effectObject.transform.localPosition = new Vector3(0f, 0.025f, 0f);
-            effectObject.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
-            effectObject.transform.localScale = Vector3.one * 0.85f;
+            var effectObject = new GameObject(workerName + "_SpawnVortex");
+            // The vortex is a fixed world-space sibling. It must not follow the
+            // worker actor while the goblin walks from it to the construction site.
+            effectObject.transform.SetParent(worker.parent, true);
+            effectObject.transform.SetPositionAndRotation(
+                worker.position + Vector3.up * 0.025f,
+                Quaternion.identity);
+
+            var vortexVisual = (GameObject)PrefabUtility.InstantiatePrefab(vortexAsset);
+            vortexVisual.name = "VortexVisual";
+            vortexVisual.transform.SetParent(effectObject.transform, false);
+            vortexVisual.transform.localPosition = Vector3.zero;
+            vortexVisual.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+            vortexVisual.transform.localScale = Vector3.one * 0.85f;
             foreach (var system in effectObject.GetComponentsInChildren<ParticleSystem>(true))
             {
                 var main = system.main;
                 main.playOnAwake = false;
+                main.simulationSpace = ParticleSystemSimulationSpace.Local;
+                main.prewarm = main.loop;
                 system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             }
 
@@ -2718,9 +2971,9 @@ namespace HorseParking.Presentation.Editor
             controller.AddParameter("isDisappearing", AnimatorControllerParameterType.Bool);
             controller.AddParameter("wasHit", AnimatorControllerParameterType.Trigger);
 
-            var idleState = stateMachine.AddState("WorkerIdle");
-            var emergingState = stateMachine.AddState("WorkerEmerging");
-            var disappearingState = stateMachine.AddState("WorkerDisappearing");
+            var idleState = stateMachine.AddState("Spawn_Idle");
+            var emergingState = stateMachine.AddState("Spawn_In");
+            var disappearingState = stateMachine.AddState("Spawn_Out");
             var walkState = stateMachine.AddState("WorkerWalk");
             var hammeringState = stateMachine.AddState("WorkerHammering");
             var hitState = stateMachine.AddState("WorkerHit");
@@ -2728,14 +2981,12 @@ namespace HorseParking.Presentation.Editor
                 ConstructionWorkerIdleAnimationPath,
                 preferredName: null,
                 loopTime: true);
-            var groundSpawnClip = GetConstructionWorkerAnimationClip(
-                ConstructionWorkerSpawnAnimationPath,
-                preferredName: "Spawn_Ground",
-                loopTime: false);
-            emergingState.motion = groundSpawnClip;
-            disappearingState.motion = groundSpawnClip;
-            disappearingState.speed = -1f;
-            disappearingState.cycleOffset = 1f;
+            // Spawn_Ground contains its own large vertical displacement. Combining it
+            // with the authored vortex trajectory made workers appear to fall from
+            // the sky. Spawn states therefore use a stable ready-made idle pose while
+            // the visual child alone moves between below-ground and ground level.
+            emergingState.motion = idleState.motion;
+            disappearingState.motion = idleState.motion;
             walkState.motion = GetConstructionWorkerAnimationClip(
                 ConstructionWorkerWalkAnimationPath,
                 preferredName: null,
@@ -3026,6 +3277,169 @@ namespace HorseParking.Presentation.Editor
             {
                 settings.EnsureTranslation(entry.Item1, entry.Item2, entry.Item3);
             }
+            EditorUtility.SetDirty(settings);
+        }
+
+        private static void EnsureStage4Translations(GameLocalizationSettings settings)
+        {
+            var entries = new[]
+            {
+                ("ru", "ui.economy.summary", "УПРАВЛЕНИЕ ПАРКОВКОЙ\nЗолото: {gold}   •   расходы через {seconds} с\nЗарплата: {salary}   •   дань королю: {tribute}"),
+                ("ru", "ui.economy.compact", "[M] ЭКОНОМИКА   •   Золото: {gold}   •   Расходы через: {seconds} с"),
+                ("ru", "ui.economy.close_hint", "M или Esc — закрыть меню"),
+                ("ru", "ui.economy.tutorial", "НОВОЕ: нажмите M — экономика, расходы и улучшения парковки"),
+                ("ru", "ui.economy.last_operation", "Последняя операция: {operation} {amount}"),
+                ("ru", "ui.economy.ready", "Доходы и расходы проходят через единый кошелёк."),
+                ("ru", "ui.economy.upgrade.buy", "{upgrade} ({effect})\nУровень {level} → {nextLevel}   •   Цена: {cost} золота"),
+                ("ru", "ui.economy.upgrade.maximum", "{upgrade} ({effect})\nУровень {level} — МАКСИМУМ"),
+                ("ru", "ui.economy.effect.capacity", "+{value} мест за уровень"),
+                ("ru", "ui.economy.effect.speed", "+{value}% за уровень"),
+                ("ru", "economy.income.parking", "Доход от парковки"),
+                ("ru", "economy.expense.materials", "Покупка материалов"),
+                ("ru", "economy.expense.driver_salary", "Зарплата возницы"),
+                ("ru", "economy.expense.royal_tribute", "Дань королю"),
+                ("ru", "economy.upgrade.cart_capacity", "Вместимость телеги"),
+                ("ru", "economy.upgrade.cart_speed", "Скорость телеги"),
+                ("ru", "economy.upgrade.construction_speed", "Скорость строительства"),
+                ("ru", "economy.notice.expense_unpaid", "Внимание: золота не хватило на обязательный расход. Баланс не ушёл в минус."),
+                ("ru", "economy.notice.upgrade_insufficient_gold", "Недостаточно золота для улучшения."),
+                ("ru", "economy.notice.maximum_level", "Улучшение уже достигло максимального уровня."),
+                ("en", "ui.economy.summary", "PARKING MANAGEMENT\nGold: {gold}   •   expenses in {seconds}s\nDriver salary: {salary}   •   royal tribute: {tribute}"),
+                ("en", "ui.economy.compact", "[M] ECONOMY   •   Gold: {gold}   •   Expenses in: {seconds}s"),
+                ("en", "ui.economy.close_hint", "M or Esc — close menu"),
+                ("en", "ui.economy.tutorial", "NEW: press M — parking economy, expenses and upgrades"),
+                ("en", "ui.economy.last_operation", "Last operation: {operation} {amount}"),
+                ("en", "ui.economy.ready", "Income and expenses use one shared wallet."),
+                ("en", "ui.economy.upgrade.buy", "{upgrade} ({effect})\nLevel {level} → {nextLevel}   •   Cost: {cost} gold"),
+                ("en", "ui.economy.upgrade.maximum", "{upgrade} ({effect})\nLevel {level} — MAXIMUM"),
+                ("en", "ui.economy.effect.capacity", "+{value} slots per level"),
+                ("en", "ui.economy.effect.speed", "+{value}% per level"),
+                ("en", "economy.income.parking", "Parking income"),
+                ("en", "economy.expense.materials", "Material purchase"),
+                ("en", "economy.expense.driver_salary", "Driver salary"),
+                ("en", "economy.expense.royal_tribute", "Royal tribute"),
+                ("en", "economy.upgrade.cart_capacity", "Cart capacity"),
+                ("en", "economy.upgrade.cart_speed", "Cart speed"),
+                ("en", "economy.upgrade.construction_speed", "Construction speed"),
+                ("en", "economy.notice.expense_unpaid", "Warning: there was not enough gold for a required expense. The balance did not go negative."),
+                ("en", "economy.notice.upgrade_insufficient_gold", "Not enough gold for this upgrade."),
+                ("en", "economy.notice.maximum_level", "This upgrade is already at maximum level.")
+            };
+            foreach (var entry in entries)
+            {
+                settings.EnsureTranslation(entry.Item1, entry.Item2, entry.Item3);
+            }
+
+            EditorUtility.SetDirty(settings);
+        }
+
+        private static void EnsureStage51Translations(GameLocalizationSettings settings)
+        {
+            var entries = new[]
+            {
+                ("ru", "ui.client_archetype.summary", "КЛИЕНТ: {name}\n{description}\nСтоянка: около {seconds} с   •   Тариф: {gold} золота / {period} с"),
+                ("ru", "client.archetype.traveler", "Путник"),
+                ("ru", "client.archetype.traveler.description", "Спокоен: стоит недолго и платит обычный тариф."),
+                ("ru", "client.archetype.merchant", "Торговец"),
+                ("ru", "client.archetype.merchant.description", "Спешит по делам: стоит дольше и платит больше."),
+                ("ru", "client.archetype.royal_inspector", "Королевский инспектор"),
+                ("ru", "client.archetype.royal_inspector.description", "Требовательный гость: задерживается дольше, но платит высокий тариф."),
+                ("en", "ui.client_archetype.summary", "CLIENT: {name}\n{description}\nParking: about {seconds}s   •   Rate: {gold} gold / {period}s"),
+                ("en", "client.archetype.traveler", "Traveler"),
+                ("en", "client.archetype.traveler.description", "Calm: parks briefly and pays the standard rate."),
+                ("en", "client.archetype.merchant", "Merchant"),
+                ("en", "client.archetype.merchant.description", "Busy: stays longer and pays more."),
+                ("en", "client.archetype.royal_inspector", "Royal inspector"),
+                ("en", "client.archetype.royal_inspector.description", "Demanding: stays longer but pays the highest rate.")
+            };
+            foreach (var entry in entries)
+            {
+                settings.EnsureTranslation(entry.Item1, entry.Item2, entry.Item3);
+            }
+
+            EditorUtility.SetDirty(settings);
+        }
+
+        private static void EnsureStage52Translations(GameLocalizationSettings settings)
+        {
+            var entries = new[]
+            {
+                ("ru", "interaction.client.talk", "Поговорить"),
+                ("ru", "interaction.client.target", "Клиент"),
+                ("ru", "interaction.client.spoke", "Клиент ответил"),
+                ("ru", "client.reaction.neutral", "СПОКОЙНО"),
+                ("ru", "client.reaction.friendly", "ДРУЖЕЛЮБНО"),
+                ("ru", "client.reaction.impatient", "ТОРОПИТСЯ"),
+                ("ru", "client.reaction.suspicious", "НАБЛЮДАЕТ"),
+                ("ru", "client.reaction.satisfied", "ДОВОЛЕН"),
+
+                ("ru", "client.dialogue.traveler.arriving", "Эй, управляющий! Придержи место для моей лошади — она считает себя каретой."),
+                ("ru", "client.dialogue.traveler.parked", "Благодарю. Я ненадолго: только купить карту, на которой эта парковка уже нарисована."),
+                ("ru", "client.dialogue.traveler.returning", "Вернулся! Лошадь уверяет, что счётчик работал честно."),
+                ("ru", "client.dialogue.traveler.waiting_payment", "Оплата у неё в зубах. Не спрашивай, где она держала сдачу."),
+                ("ru", "client.dialogue.traveler.payment_received", "Честная плата за честное стойло."),
+                ("ru", "client.dialogue.traveler.leaving", "Удачи, управляющий. И пусть король не введёт налог на копыта!"),
+                ("ru", "client.dialogue.traveler.greeting.1", "Хорошее место. Табличек почти столько же, сколько заборов."),
+                ("ru", "client.dialogue.traveler.greeting.2", "Я бы поболтал, но моя лошадь уже читает тарифы."),
+
+                ("ru", "client.dialogue.merchant.arriving", "Освободите проезд! У меня деловая встреча и три мешка срочности."),
+                ("ru", "client.dialogue.merchant.parked", "Смотрите за лошадью. Она однажды продала телегу без моего согласия."),
+                ("ru", "client.dialogue.merchant.returning", "Где мой транспорт? Время — золото, особенно парковочное."),
+                ("ru", "client.dialogue.merchant.waiting_payment", "Мешочек готов. Откройте проезд, пока проценты не набежали."),
+                ("ru", "client.dialogue.merchant.payment_received", "Запишите как транспортные расходы."),
+                ("ru", "client.dialogue.merchant.leaving", "Если понадобится опт — свистните. Если штраф — не свистите."),
+                ("ru", "client.dialogue.merchant.greeting.1", "Разговор бесплатно? Подозрительно щедро."),
+                ("ru", "client.dialogue.merchant.greeting.2", "Кратко, пожалуйста. Рынок закрывается раньше здравого смысла."),
+
+                ("ru", "client.dialogue.royal_inspector.arriving", "Королевская проверка. Делайте вид, что всё так и задумано."),
+                ("ru", "client.dialogue.royal_inspector.parked", "Осмотрю объект. Заборы пересчитаю лично."),
+                ("ru", "client.dialogue.royal_inspector.returning", "Проверка окончена. Нарушения достаточно средневековые."),
+                ("ru", "client.dialogue.royal_inspector.waiting_payment", "Казна платит точно. Иногда."),
+                ("ru", "client.dialogue.royal_inspector.payment_received", "Получено? Значит, в отчёте парковка существует."),
+                ("ru", "client.dialogue.royal_inspector.leaving", "Передам королю: шлагбаум поднимается убедительно."),
+                ("ru", "client.dialogue.royal_inspector.greeting.1", "Почему у вас гоблинов бьют для повышения производительности?"),
+                ("ru", "client.dialogue.royal_inspector.greeting.2", "Не отвечайте. Я уже записал: «местная система мотивации»."),
+
+                ("en", "interaction.client.talk", "Talk"),
+                ("en", "interaction.client.target", "Client"),
+                ("en", "interaction.client.spoke", "The client replied"),
+                ("en", "client.reaction.neutral", "CALM"),
+                ("en", "client.reaction.friendly", "FRIENDLY"),
+                ("en", "client.reaction.impatient", "IN A HURRY"),
+                ("en", "client.reaction.suspicious", "OBSERVING"),
+                ("en", "client.reaction.satisfied", "SATISFIED"),
+
+                ("en", "client.dialogue.traveler.arriving", "Manager! Hold a space for my horse — she thinks she is a carriage."),
+                ("en", "client.dialogue.traveler.parked", "Thank you. I will be brief: I only need a map where this parking lot is already drawn."),
+                ("en", "client.dialogue.traveler.returning", "I am back! The horse insists the meter was honest."),
+                ("en", "client.dialogue.traveler.waiting_payment", "The payment is in her teeth. Do not ask where she kept the change."),
+                ("en", "client.dialogue.traveler.payment_received", "Fair payment for a fair stall."),
+                ("en", "client.dialogue.traveler.leaving", "Good luck, manager. May the king never invent a hoof tax!"),
+                ("en", "client.dialogue.traveler.greeting.1", "Fine place. Almost as many signs as fences."),
+                ("en", "client.dialogue.traveler.greeting.2", "I would chat, but my horse is already reading the rates."),
+
+                ("en", "client.dialogue.merchant.arriving", "Clear the lane! I have a business meeting and three sacks of urgency."),
+                ("en", "client.dialogue.merchant.parked", "Watch the horse. She once sold a cart without my permission."),
+                ("en", "client.dialogue.merchant.returning", "Where is my transport? Time is gold, especially parking time."),
+                ("en", "client.dialogue.merchant.waiting_payment", "The pouch is ready. Open the lane before interest starts accruing."),
+                ("en", "client.dialogue.merchant.payment_received", "Record it as a transport expense."),
+                ("en", "client.dialogue.merchant.leaving", "Whistle if you need wholesale. Do not whistle if it is a fine."),
+                ("en", "client.dialogue.merchant.greeting.1", "A free conversation? Suspiciously generous."),
+                ("en", "client.dialogue.merchant.greeting.2", "Briefly, please. The market closes before common sense does."),
+
+                ("en", "client.dialogue.royal_inspector.arriving", "Royal inspection. Pretend everything is exactly as intended."),
+                ("en", "client.dialogue.royal_inspector.parked", "I shall inspect the premises. I will count the fences personally."),
+                ("en", "client.dialogue.royal_inspector.returning", "Inspection complete. The violations are acceptably medieval."),
+                ("en", "client.dialogue.royal_inspector.waiting_payment", "The treasury pays precisely. Occasionally."),
+                ("en", "client.dialogue.royal_inspector.payment_received", "Received? Then this parking lot officially exists."),
+                ("en", "client.dialogue.royal_inspector.leaving", "I shall report to the king: the barrier rises convincingly."),
+                ("en", "client.dialogue.royal_inspector.greeting.1", "Why are goblins struck to improve productivity?"),
+                ("en", "client.dialogue.royal_inspector.greeting.2", "Do not answer. I have written: “local motivation system”.")
+            };
+
+            foreach (var entry in entries)
+                settings.EnsureTranslation(entry.Item1, entry.Item2, entry.Item3);
+
             EditorUtility.SetDirty(settings);
         }
 
@@ -3336,6 +3750,63 @@ namespace HorseParking.Presentation.Editor
             return settings;
         }
 
+        private static ParkingEconomySettings LoadOrCreateParkingEconomySettings()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<ParkingEconomySettings>(ParkingEconomySettingsPath);
+            if (settings != null)
+            {
+                return settings;
+            }
+
+            EnsureFolder("Assets/_Project/Settings");
+            settings = ScriptableObject.CreateInstance<ParkingEconomySettings>();
+            AssetDatabase.CreateAsset(settings, ParkingEconomySettingsPath);
+            AssetDatabase.SaveAssets();
+            return settings;
+        }
+
+        private static ParkingClientArchetypeSettings LoadOrCreateParkingClientArchetypeSettings()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<ParkingClientArchetypeSettings>(
+                ParkingClientArchetypeSettingsPath);
+            if (settings == null)
+            {
+                EnsureFolder("Assets/_Project/Settings");
+                settings = ScriptableObject.CreateInstance<ParkingClientArchetypeSettings>();
+                settings.EnsureDemoDefaults();
+                AssetDatabase.CreateAsset(settings, ParkingClientArchetypeSettingsPath);
+            }
+            else
+            {
+                settings.EnsureDemoDefaults();
+            }
+
+            EditorUtility.SetDirty(settings);
+            AssetDatabase.SaveAssets();
+            return settings;
+        }
+
+        private static ParkingClientDialogueSettings LoadOrCreateParkingClientDialogueSettings()
+        {
+            var settings = AssetDatabase.LoadAssetAtPath<ParkingClientDialogueSettings>(
+                ParkingClientDialogueSettingsPath);
+            if (settings == null)
+            {
+                EnsureFolder("Assets/_Project/Settings");
+                settings = ScriptableObject.CreateInstance<ParkingClientDialogueSettings>();
+                settings.EnsureDemoDefaults();
+                AssetDatabase.CreateAsset(settings, ParkingClientDialogueSettingsPath);
+            }
+            else
+            {
+                settings.EnsureDemoDefaults();
+            }
+
+            EditorUtility.SetDirty(settings);
+            AssetDatabase.SaveAssets();
+            return settings;
+        }
+
         private static Material LoadOrCreateConstructionSignMaterial()
         {
             var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(ConstructionSignTexturePath)
@@ -3408,6 +3879,386 @@ namespace HorseParking.Presentation.Editor
             material.SetFloat("_Glossiness", 0.18f);
             EditorUtility.SetDirty(material);
             return material;
+        }
+
+        private static void CreateParkingEconomyHud(
+            GameCompositionRoot compositionRoot,
+            FirstPersonPlayerController playerController)
+        {
+            var existing = GameObject.Find("ParkingEconomyHUD");
+            if (existing != null)
+            {
+                Object.DestroyImmediate(existing);
+            }
+
+            var canvasObject = new GameObject(
+                "ParkingEconomyHUD",
+                typeof(Canvas),
+                typeof(CanvasScaler),
+                typeof(GraphicRaycaster));
+            var canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 22;
+
+            var scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1280f, 720f);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            // The Unity Game tab is frequently much shorter than a standalone
+            // window. Scaling from width keeps text readable in both contexts.
+            scaler.matchWidthOrHeight = 0f;
+
+            var compactObject = new GameObject(
+                "EconomyCompactBar",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            compactObject.transform.SetParent(canvasObject.transform, false);
+            var compactRect = compactObject.GetComponent<RectTransform>();
+            compactRect.anchorMin = compactRect.anchorMax = compactRect.pivot = new Vector2(1f, 1f);
+            compactRect.anchoredPosition = new Vector2(-16f, -16f);
+            compactRect.sizeDelta = new Vector2(500f, 48f);
+            compactObject.GetComponent<Image>().color = new Color(0.055f, 0.032f, 0.018f, 0.94f);
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var compactText = CreateCentredText(
+                compactObject.transform,
+                "EconomyCompactText",
+                font,
+                22,
+                Vector2.zero,
+                new Vector2(476f, 38f));
+            compactText.resizeTextForBestFit = true;
+            compactText.resizeTextMinSize = 15;
+            compactText.resizeTextMaxSize = 22;
+
+            var tutorialObject = new GameObject(
+                "EconomyTutorialToast",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            tutorialObject.transform.SetParent(canvasObject.transform, false);
+            var tutorialRect = tutorialObject.GetComponent<RectTransform>();
+            tutorialRect.anchorMin = tutorialRect.anchorMax = tutorialRect.pivot = new Vector2(0.5f, 0f);
+            tutorialRect.anchoredPosition = new Vector2(0f, 26f);
+            tutorialRect.sizeDelta = new Vector2(720f, 62f);
+            tutorialObject.GetComponent<Image>().color = new Color(0.055f, 0.032f, 0.018f, 0.96f);
+            var tutorialText = CreateCentredText(
+                tutorialObject.transform,
+                "EconomyTutorialText",
+                font,
+                25,
+                Vector2.zero,
+                new Vector2(690f, 50f));
+            tutorialText.resizeTextForBestFit = true;
+            tutorialText.resizeTextMinSize = 17;
+            tutorialText.resizeTextMaxSize = 25;
+
+            var panelObject = new GameObject(
+                "ParkingEconomyPanel",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            panelObject.transform.SetParent(canvasObject.transform, false);
+            var panelRect = panelObject.GetComponent<RectTransform>();
+            panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(1f, 1f);
+            panelRect.anchoredPosition = new Vector2(-16f, -16f);
+            panelRect.sizeDelta = new Vector2(520f, 410f);
+            panelObject.GetComponent<Image>().color = new Color(0.055f, 0.032f, 0.018f, 0.97f);
+
+            var summary = CreateCentredText(
+                panelObject.transform,
+                "EconomySummary",
+                font,
+                27,
+                new Vector2(0f, 145f),
+                new Vector2(484f, 102f));
+            var feedback = CreateCentredText(
+                panelObject.transform,
+                "EconomyFeedback",
+                font,
+                22,
+                new Vector2(0f, 78f),
+                new Vector2(484f, 48f));
+            var cartCapacity = CreateUiButton(
+                panelObject.transform,
+                "UpgradeCartCapacity",
+                font,
+                new Vector2(0f, 17f),
+                new Vector2(476f, 62f));
+            var cartSpeed = CreateUiButton(
+                panelObject.transform,
+                "UpgradeCartSpeed",
+                font,
+                new Vector2(0f, -57f),
+                new Vector2(476f, 62f));
+            var constructionSpeed = CreateUiButton(
+                panelObject.transform,
+                "UpgradeConstructionSpeed",
+                font,
+                new Vector2(0f, -131f),
+                new Vector2(476f, 62f));
+
+            summary.resizeTextForBestFit = true;
+            summary.resizeTextMinSize = 19;
+            summary.resizeTextMaxSize = 27;
+            summary.horizontalOverflow = HorizontalWrapMode.Wrap;
+            feedback.resizeTextForBestFit = true;
+            feedback.resizeTextMinSize = 16;
+            feedback.resizeTextMaxSize = 22;
+            feedback.horizontalOverflow = HorizontalWrapMode.Wrap;
+            foreach (var label in new[]
+                     {
+                         cartCapacity.label,
+                         cartSpeed.label,
+                         constructionSpeed.label
+                     })
+            {
+                label.fontSize = 23;
+                label.resizeTextForBestFit = true;
+                label.resizeTextMinSize = 16;
+                label.resizeTextMaxSize = 23;
+                label.horizontalOverflow = HorizontalWrapMode.Wrap;
+                label.verticalOverflow = VerticalWrapMode.Truncate;
+            }
+
+            var closeHint = CreateCentredText(
+                panelObject.transform,
+                "EconomyCloseHint",
+                font,
+                18,
+                new Vector2(0f, -181f),
+                new Vector2(476f, 30f));
+            panelObject.SetActive(false);
+            canvasObject.AddComponent<ParkingEconomyPresenter>().Configure(
+                compositionRoot,
+                playerController,
+                panelObject,
+                compactText,
+                closeHint,
+                tutorialObject,
+                tutorialText,
+                summary,
+                feedback,
+                cartCapacity.button,
+                cartCapacity.label,
+                cartSpeed.button,
+                cartSpeed.label,
+                constructionSpeed.button,
+                constructionSpeed.label);
+        }
+
+        private static void CreateParkingClientArchetypeHud(
+            GameCompositionRoot compositionRoot,
+            ParkingMvpRuntimeController runtime)
+        {
+            var existing = GameObject.Find("ParkingClientArchetypeHUD");
+            if (existing != null)
+            {
+                Object.DestroyImmediate(existing);
+            }
+
+            var canvasObject = new GameObject(
+                "ParkingClientArchetypeHUD",
+                typeof(Canvas),
+                typeof(CanvasScaler));
+            var canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 21;
+
+            var scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1280f, 720f);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0f;
+
+            var panelObject = new GameObject(
+                "CurrentClientProfile",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            panelObject.transform.SetParent(canvasObject.transform, false);
+            var panelRect = panelObject.GetComponent<RectTransform>();
+            panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0f, 0f);
+            panelRect.anchoredPosition = new Vector2(14f, 14f);
+            panelRect.sizeDelta = new Vector2(540f, 108f);
+            panelObject.GetComponent<Image>().color = new Color(0.055f, 0.032f, 0.018f, 0.90f);
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var profileText = CreateCentredText(
+                panelObject.transform,
+                "CurrentClientProfileText",
+                font,
+                22,
+                Vector2.zero,
+                new Vector2(510f, 90f));
+            profileText.alignment = TextAnchor.MiddleLeft;
+            profileText.resizeTextForBestFit = true;
+            profileText.resizeTextMinSize = 15;
+            profileText.resizeTextMaxSize = 22;
+            profileText.horizontalOverflow = HorizontalWrapMode.Wrap;
+
+            canvasObject.AddComponent<ParkingClientArchetypeHud>().Configure(
+                compositionRoot,
+                runtime,
+                profileText);
+        }
+
+        private static void CreateParkingClientDialogue(
+            GameCompositionRoot compositionRoot,
+            ParkingMvpRuntimeController runtime,
+            Transform riderRoot,
+            ParkingClientDialogueSettings dialogueSettings)
+        {
+            var existingHud = GameObject.Find("ParkingClientDialogueHUD");
+            if (existingHud != null)
+                Object.DestroyImmediate(existingHud);
+
+            var existingZone = FindDescendant(riderRoot, "ClientDialogueInteractionZone");
+            if (existingZone != null)
+                Object.DestroyImmediate(existingZone.gameObject);
+
+            var interactionZone = new GameObject(
+                "ClientDialogueInteractionZone",
+                typeof(SphereCollider),
+                typeof(ParkingClientInteractionTarget));
+            interactionZone.transform.SetParent(riderRoot, false);
+            var riderBounds = GetEnabledRendererBounds(riderRoot.gameObject);
+            interactionZone.transform.position = riderBounds.center + (Vector3.up * riderBounds.extents.y * 0.15f);
+            interactionZone.transform.rotation = Quaternion.identity;
+
+            var zoneScale = interactionZone.transform.lossyScale;
+            var largestScale = Mathf.Max(
+                0.0001f,
+                Mathf.Max(Mathf.Abs(zoneScale.x), Mathf.Max(Mathf.Abs(zoneScale.y), Mathf.Abs(zoneScale.z))));
+            var dialogueCollider = interactionZone.GetComponent<SphereCollider>();
+            dialogueCollider.isTrigger = true;
+            dialogueCollider.radius = 0.58f / largestScale;
+            interactionZone.GetComponent<ParkingClientInteractionTarget>().Configure(runtime);
+
+            var canvasObject = new GameObject(
+                "ParkingClientDialogueHUD",
+                typeof(Canvas),
+                typeof(CanvasScaler));
+            var canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 24;
+
+            var scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1280f, 720f);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.35f;
+
+            var panelObject = new GameObject(
+                "ClientDialogueCard",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(CanvasGroup));
+            panelObject.transform.SetParent(canvasObject.transform, false);
+            var panelRect = panelObject.GetComponent<RectTransform>();
+            panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0.5f, 0f);
+            panelRect.anchoredPosition = new Vector2(0f, 142f);
+            panelRect.sizeDelta = new Vector2(720f, 116f);
+            var panelImage = panelObject.GetComponent<Image>();
+            panelImage.color = new Color(0.045f, 0.028f, 0.018f, 0.94f);
+            panelImage.raycastTarget = false;
+
+            var accentObject = new GameObject(
+                "ReactionAccent",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            accentObject.transform.SetParent(panelObject.transform, false);
+            var accentRect = accentObject.GetComponent<RectTransform>();
+            accentRect.anchorMin = new Vector2(0f, 0f);
+            accentRect.anchorMax = new Vector2(0f, 1f);
+            accentRect.pivot = new Vector2(0f, 0.5f);
+            accentRect.anchoredPosition = Vector2.zero;
+            accentRect.sizeDelta = new Vector2(7f, 0f);
+            var accent = accentObject.GetComponent<Image>();
+            accent.raycastTarget = false;
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var speaker = CreateCentredText(
+                panelObject.transform,
+                "SpeakerName",
+                font,
+                24,
+                Vector2.zero,
+                new Vector2(430f, 30f));
+            ConfigureDialogueTextRect(
+                speaker,
+                new Vector2(0f, 1f),
+                new Vector2(0f, 1f),
+                new Vector2(0f, 1f),
+                new Vector2(24f, -10f));
+            speaker.alignment = TextAnchor.MiddleLeft;
+            speaker.fontStyle = FontStyle.Bold;
+            speaker.color = new Color(1f, 0.87f, 0.56f, 1f);
+
+            var reaction = CreateCentredText(
+                panelObject.transform,
+                "ReactionLabel",
+                font,
+                17,
+                Vector2.zero,
+                new Vector2(230f, 28f));
+            ConfigureDialogueTextRect(
+                reaction,
+                new Vector2(1f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(-20f, -11f));
+            reaction.alignment = TextAnchor.MiddleRight;
+            reaction.fontStyle = FontStyle.Bold;
+            reaction.color = new Color(0.84f, 0.81f, 0.70f, 1f);
+
+            var line = CreateCentredText(
+                panelObject.transform,
+                "DialogueLine",
+                font,
+                22,
+                Vector2.zero,
+                new Vector2(670f, 62f));
+            ConfigureDialogueTextRect(
+                line,
+                new Vector2(0f, 0f),
+                new Vector2(0f, 0f),
+                new Vector2(0f, 0f),
+                new Vector2(24f, 10f));
+            line.alignment = TextAnchor.MiddleLeft;
+            line.horizontalOverflow = HorizontalWrapMode.Wrap;
+            line.verticalOverflow = VerticalWrapMode.Truncate;
+            line.resizeTextForBestFit = true;
+            line.resizeTextMinSize = 17;
+            line.resizeTextMaxSize = 22;
+
+            canvasObject.AddComponent<ParkingClientDialoguePresenter>().Configure(
+                compositionRoot,
+                runtime,
+                dialogueSettings,
+                panelObject,
+                panelObject.GetComponent<CanvasGroup>(),
+                accent,
+                speaker,
+                reaction,
+                line);
+        }
+
+        private static void ConfigureDialogueTextRect(
+            Text text,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Vector2 pivot,
+            Vector2 anchoredPosition)
+        {
+            var rect = text.rectTransform;
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.pivot = pivot;
+            rect.anchoredPosition = anchoredPosition;
         }
 
         private static void CreateLogisticsInventoryHud(GameCompositionRoot compositionRoot)
