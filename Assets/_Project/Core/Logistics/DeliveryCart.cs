@@ -113,5 +113,25 @@ namespace HorseParking.Core.Logistics
             JourneyState = CartJourneyState.AtWarehouse;
             return CartJourneyResult.Success();
         }
+
+        /// <summary>
+        /// Restores only stable journey endpoints. A save made while traveling is
+        /// normalized by the application layer before reaching this method.
+        /// </summary>
+        public void RestoreStableState(CartJourneyState state, CartDestination? restoredDestination)
+        {
+            if (state != CartJourneyState.AtWarehouse && state != CartJourneyState.AtDestination)
+            {
+                throw new ArgumentOutOfRangeException(nameof(state), state, "Only stable cart endpoints can be restored.");
+            }
+
+            if (state == CartJourneyState.AtDestination && restoredDestination == null)
+            {
+                throw new ArgumentNullException(nameof(restoredDestination));
+            }
+
+            destination = state == CartJourneyState.AtDestination ? restoredDestination : null;
+            JourneyState = state;
+        }
     }
 }

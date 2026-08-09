@@ -1,3 +1,4 @@
+using System;
 using HorseParking.Application.Interaction;
 using HorseParking.Core.Interaction;
 using HorseParking.Presentation.Composition;
@@ -23,6 +24,8 @@ namespace HorseParking.Presentation.Player
         private float verticalVelocity;
         private float cameraPitch;
         private bool uiInputBlocked;
+
+        public event Action<IInteractionTarget, InteractionResult>? InteractionCompleted;
 
         public void Configure(Camera cameraComponent, GameCompositionRoot compositionRoot)
         {
@@ -128,6 +131,7 @@ namespace HorseParking.Presentation.Player
             }
 
             var result = interactUseCase.Execute(target);
+            InteractionCompleted?.Invoke(target, result);
             Debug.Log(result.MessageKey.Value);
         }
 

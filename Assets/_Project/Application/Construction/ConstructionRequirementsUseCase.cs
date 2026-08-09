@@ -107,6 +107,7 @@ namespace HorseParking.Application.Construction
         public event Action? ConstructionStarted;
         public event Action? ConstructionProgressChanged;
         public event Action? ConstructionCompleted;
+        public event Action? WorkerHitBoostApplied;
 
         public ConstructionRequirementsUseCase(
             ConstructionPlan plan,
@@ -252,11 +253,52 @@ namespace HorseParking.Application.Construction
             workerHitSpeedMultiplier = speedMultiplier;
             workerHitBoostRemainingSeconds = durationSeconds;
             workerHitCooldownRemainingSeconds = cooldownSeconds;
+            WorkerHitBoostApplied?.Invoke();
             return true;
         }
 
         public bool CanApplyWorkerHitSpeedBoost =>
             project.State == ConstructionState.InProgress
             && workerHitCooldownRemainingSeconds <= 0d;
+
+        public bool TryRestoreProgress(ConstructionState state, double normalizedProgress)
+        {
+            if (!CanRestoreProgress(state, normalizedProgress)) return false;
+            try
+            {
+                project.Restore(state, normalizedProgress);
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
+
+            workerHitSpeedMultiplier = 1d;
+            workerHitBoostRemainingSeconds = 0d;
+            workerHitCooldownRemainingSeconds = 0d;
+            if (state == ConstructionState.InProgress) ConstructionStarted?.Invoke();
+            ConstructionProgressChanged?.Invoke();
+            if (state == ConstructionState.Completed) ConstructionCompleted?.Invoke();
+            return true;
+        }
+
+        public bool CanRestoreProgress(ConstructionState state, double normalizedProgress)
+        {
+            if (!Enum.IsDefined(typeof(ConstructionState), state)
+                || double.IsNaN(normalizedProgress)
+                || normalizedProgress < 0d
+                || normalizedProgress > 1d)
+            {
+                return false;
+            }
+
+            return state switch
+            {
+                ConstructionState.Planned => normalizedProgress == 0d,
+                ConstructionState.InProgress => normalizedProgress < 1d,
+                ConstructionState.Completed => normalizedProgress == 1d,
+                _ => false
+            };
+        }
     }
 }

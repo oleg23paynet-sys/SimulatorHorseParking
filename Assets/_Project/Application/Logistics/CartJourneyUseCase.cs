@@ -71,5 +71,28 @@ namespace HorseParking.Application.Logistics
         public CartJourneyResult NotifyArrivedAtDestination() => cart.NotifyArrivedAtDestination();
         public CartJourneyResult TryBeginReturn() => cart.TryBeginReturn();
         public CartJourneyResult NotifyArrivedAtWarehouse() => cart.NotifyArrivedAtWarehouse();
+
+        public bool TryRestoreStableState(CartJourneyState state, string? destinationId)
+        {
+            if (!CanRestoreStableState(state, destinationId)) return false;
+            if (state == CartJourneyState.AtWarehouse)
+            {
+                cart.RestoreStableState(state, null);
+                return true;
+            }
+
+            var destination = destinations[destinationId!];
+
+            cart.RestoreStableState(state, destination);
+            return true;
+        }
+
+        public bool CanRestoreStableState(CartJourneyState state, string? destinationId)
+        {
+            return state == CartJourneyState.AtWarehouse
+                || (state == CartJourneyState.AtDestination
+                    && !string.IsNullOrWhiteSpace(destinationId)
+                    && destinations.ContainsKey(destinationId));
+        }
     }
 }

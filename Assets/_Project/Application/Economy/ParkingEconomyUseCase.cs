@@ -272,6 +272,48 @@ namespace HorseParking.Application.Economy
                 noticeKey);
         }
 
+        public bool TryRestoreProgress(
+            IReadOnlyDictionary<ParkingUpgradeId, int> restoredLevels,
+            double restoredSecondsUntilExpenses)
+        {
+            if (!CanRestoreProgress(restoredLevels, restoredSecondsUntilExpenses)) return false;
+
+            foreach (var pair in upgrades)
+            {
+                pair.Value.Level = restoredLevels.TryGetValue(pair.Key, out var restoredLevel)
+                    ? restoredLevel
+                    : 0;
+            }
+
+            secondsUntilExpenses = restoredSecondsUntilExpenses;
+            noticeKey = null;
+            EconomyChanged?.Invoke();
+            return true;
+        }
+
+        public bool CanRestoreProgress(
+            IReadOnlyDictionary<ParkingUpgradeId, int> restoredLevels,
+            double restoredSecondsUntilExpenses)
+        {
+            if (restoredLevels == null
+                || double.IsNaN(restoredSecondsUntilExpenses)
+                || restoredSecondsUntilExpenses < 0d
+                || restoredSecondsUntilExpenses > expenseIntervalSeconds)
+            {
+                return false;
+            }
+
+            foreach (var pair in upgrades)
+            {
+                var level = restoredLevels.TryGetValue(pair.Key, out var restoredLevel)
+                    ? restoredLevel
+                    : 0;
+                if (level < 0 || level > pair.Value.MaximumLevel) return false;
+            }
+
+            return true;
+        }
+
         private static LocalizationKey GetUpgradeKey(ParkingUpgradeId id)
         {
             return id switch

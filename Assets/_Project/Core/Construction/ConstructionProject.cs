@@ -49,5 +49,24 @@ namespace HorseParking.Core.Construction
 
             return true;
         }
+
+        public void Restore(ConstructionState state, double normalizedProgress)
+        {
+            if (!Enum.IsDefined(typeof(ConstructionState), state))
+                throw new ArgumentOutOfRangeException(nameof(state));
+            if (double.IsNaN(normalizedProgress) || normalizedProgress < 0d || normalizedProgress > 1d)
+                throw new ArgumentOutOfRangeException(nameof(normalizedProgress));
+            if (state == ConstructionState.Planned && normalizedProgress != 0d)
+                throw new ArgumentException("A planned construction cannot contain progress.", nameof(normalizedProgress));
+            if (state == ConstructionState.Completed && normalizedProgress != 1d)
+                throw new ArgumentException("A completed construction must contain full progress.", nameof(normalizedProgress));
+            if (state == ConstructionState.InProgress && normalizedProgress >= 1d)
+                throw new ArgumentException("In-progress construction must be below 100 percent.", nameof(normalizedProgress));
+
+            State = state;
+            ElapsedSeconds = state == ConstructionState.Completed
+                ? DurationSeconds
+                : DurationSeconds * normalizedProgress;
+        }
     }
 }

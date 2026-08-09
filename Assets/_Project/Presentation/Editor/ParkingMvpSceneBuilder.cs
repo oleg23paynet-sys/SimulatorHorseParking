@@ -5,8 +5,10 @@ using HorseParking.Presentation.Construction;
 using HorseParking.Presentation.Economy;
 using HorseParking.Presentation.Logistics;
 using HorseParking.Presentation.Localization;
+using HorseParking.Presentation.Onboarding;
 using HorseParking.Presentation.Player;
 using HorseParking.Presentation.Parking;
+using HorseParking.Presentation.Progress;
 using HorseParking.Presentation.WorldEvents;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -135,6 +137,8 @@ namespace HorseParking.Presentation.Editor
             EnsureStage51Translations(LoadOrCreateGameLocalizationSettings());
             EnsureStage52Translations(LoadOrCreateGameLocalizationSettings());
             EnsureStage53Translations(LoadOrCreateGameLocalizationSettings());
+            EnsureStage61Translations(LoadOrCreateGameLocalizationSettings());
+            EnsureStage62Translations(LoadOrCreateGameLocalizationSettings());
             compositionRoot.ConfigureLogisticsInventory(LoadOrCreateLogisticsInventorySettings());
             compositionRoot.ConfigureLocalization(LoadOrCreateGameLocalizationSettings());
             compositionRoot.ConfigureConstructionRequirements(LoadOrCreateConstructionRequirementsSettings());
@@ -145,6 +149,8 @@ namespace HorseParking.Presentation.Editor
             var playerController = CreatePlayer(compositionRoot);
             CreateLogisticsInventoryHud(compositionRoot);
             CreateParkingEconomyHud(compositionRoot, playerController);
+            CreateGameSaveHud(compositionRoot);
+            CreateFirstMinutesTutorialHud(compositionRoot, playerController);
             CreateGround();
             var parkingRouteObstacles = CreateParkingZone();
             var client = CreateClient(
@@ -314,6 +320,48 @@ namespace HorseParking.Presentation.Editor
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
             Debug.Log("Stage 5.3 royal inspection event was installed in " + ScenePath);
+        }
+
+        [MenuItem("Horse Parking/Install Stage 6.1 Save And Load")]
+        public static void InstallStage61SaveAndLoad()
+        {
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            var compositionRoot = Object.FindAnyObjectByType<GameCompositionRoot>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing GameCompositionRoot.");
+            var localizationSettings = LoadOrCreateGameLocalizationSettings();
+
+            EnsureStage61Translations(localizationSettings);
+            compositionRoot.ConfigureLocalization(localizationSettings);
+            CreateGameSaveHud(compositionRoot);
+
+            EditorUtility.SetDirty(compositionRoot);
+            EditorUtility.SetDirty(localizationSettings);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Stage 6.1 save/load was installed in " + ScenePath);
+        }
+
+        [MenuItem("Horse Parking/Install Stage 6.2 First Minutes Tutorial")]
+        public static void InstallStage62FirstMinutesTutorial()
+        {
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            var compositionRoot = Object.FindAnyObjectByType<GameCompositionRoot>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing GameCompositionRoot.");
+            var playerController = Object.FindAnyObjectByType<FirstPersonPlayerController>()
+                ?? throw new System.InvalidOperationException("ParkingMvp is missing FirstPersonPlayerController.");
+            var localizationSettings = LoadOrCreateGameLocalizationSettings();
+
+            EnsureStage62Translations(localizationSettings);
+            compositionRoot.ConfigureLocalization(localizationSettings);
+            CreateFirstMinutesTutorialHud(compositionRoot, playerController);
+
+            EditorUtility.SetDirty(compositionRoot);
+            EditorUtility.SetDirty(localizationSettings);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Stage 6.2 first-minutes tutorial was installed in " + ScenePath);
         }
 
         [MenuItem("Horse Parking/Install Stage 3.1 Inventory")]
@@ -3559,6 +3607,74 @@ namespace HorseParking.Presentation.Editor
             EditorUtility.SetDirty(settings);
         }
 
+        private static void EnsureStage61Translations(GameLocalizationSettings settings)
+        {
+            var entries = new[]
+            {
+                ("ru", "ui.save.shortcuts", "[F5] Сохранить  •  [F9] Загрузить"),
+                ("ru", "ui.save.saved", "Игра сохранена"),
+                ("ru", "ui.save.loaded", "Прогресс загружен"),
+                ("ru", "ui.save.new_game", "Новое прохождение: сохранения пока нет"),
+                ("ru", "ui.save.no_save", "Сохранение ещё не создано"),
+                ("ru", "ui.save.invalid", "Сохранение повреждено или создано другой версией"),
+                ("ru", "ui.save.storage_error", "Не удалось обратиться к файлу сохранения"),
+                ("en", "ui.save.shortcuts", "[F5] Save  •  [F9] Load"),
+                ("en", "ui.save.saved", "Game saved"),
+                ("en", "ui.save.loaded", "Progress loaded"),
+                ("en", "ui.save.new_game", "New game: no save exists yet"),
+                ("en", "ui.save.no_save", "No save has been created yet"),
+                ("en", "ui.save.invalid", "The save is damaged or belongs to another version"),
+                ("en", "ui.save.storage_error", "The save file could not be accessed")
+            };
+
+            foreach (var entry in entries)
+                settings.EnsureTranslation(entry.Item1, entry.Item2, entry.Item3);
+
+            EditorUtility.SetDirty(settings);
+        }
+
+        private static void EnsureStage62Translations(GameLocalizationSettings settings)
+        {
+            var entries = new[]
+            {
+                ("ru", "ui.tutorial.title", "ОБУЧЕНИЕ  •  ШАГ {current}/{total}"),
+                ("ru", "ui.tutorial.completed_title", "ОБУЧЕНИЕ ЗАВЕРШЕНО"),
+                ("ru", "ui.tutorial.footer", "[F1] Скрыть / показать обучение"),
+                ("ru", "ui.tutorial.controls", "WASD — ходить  •  Мышь — осматриваться  •  Shift — бежать  •  Space — прыгнуть. Сделайте несколько шагов."),
+                ("ru", "ui.tutorial.collect_payment", "Дождитесь клиента у выезда. Подойдите к мешочку в зубах лошади, наведите прицел и нажмите E или ЛКМ, чтобы забрать оплату."),
+                ("ru", "ui.tutorial.open_gate", "Подойдите к шлагбауму, наведите на него прицел и нажмите E или ЛКМ, чтобы выпустить оплатившего клиента."),
+                ("ru", "ui.tutorial.send_cart", "Подойдите к телеге у склада и нажмите E. В открывшемся окне нажмите «Отправить в магазин материалов»."),
+                ("ru", "ui.tutorial.purchase", "Когда телега приедет, подойдите к лавке и нажмите E. Нажмите кнопку покупки дерева, камня или железа — товар появится в телеге."),
+                ("ru", "ui.tutorial.return_cart", "У магазина снова откройте управление телегой клавишей E и нажмите «Отправить на склад»."),
+                ("ru", "ui.tutorial.unload", "У склада подойдите к загруженной телеге и нажмите E. В окне «Телега → Склад» перенесите ресурсы или нажмите «Разгрузить всё»."),
+                ("ru", "ui.tutorial.construction", "Подойдите к строительной табличке и нажмите E. Выберите доступный проект и нажмите «Начать строительство»."),
+                ("ru", "ui.tutorial.hit_goblin", "УДАР ПО ГОБЛИНУ: подойдите к работающему гоблину на расстояние до 5 метров и нажмите E или ЛКМ. Удар временно ускорит стройку."),
+                ("ru", "ui.tutorial.wait_construction", "Стройка идёт. Можно повторно бить доступных гоблинов клавишей E или ЛКМ после перезарядки. Дождитесь 100%."),
+                ("ru", "ui.tutorial.economy", "Нажмите M, чтобы открыть меню экономики и улучшений. Повторное M или Escape закрывает меню."),
+                ("ru", "ui.tutorial.completed", "Основная петля освоена: клиент → оплата → материалы → склад → строительство → улучшения. F5 сохраняет игру, F9 загружает."),
+                ("en", "ui.tutorial.title", "TUTORIAL  •  STEP {current}/{total}"),
+                ("en", "ui.tutorial.completed_title", "TUTORIAL COMPLETE"),
+                ("en", "ui.tutorial.footer", "[F1] Hide / show tutorial"),
+                ("en", "ui.tutorial.controls", "WASD — move  •  Mouse — look  •  Shift — sprint  •  Space — jump. Walk a few steps."),
+                ("en", "ui.tutorial.collect_payment", "Wait for the client at the exit. Approach the bag in the horse's mouth, aim at it and press E or Left Mouse to collect payment."),
+                ("en", "ui.tutorial.open_gate", "Approach the exit barrier, aim at it and press E or Left Mouse to release the paying client."),
+                ("en", "ui.tutorial.send_cart", "Approach the cart by the warehouse and press E. In the window, select “Send to material store”."),
+                ("en", "ui.tutorial.purchase", "When the cart arrives, approach the stall and press E. Buy wood, stone or iron; the cargo will appear in the cart."),
+                ("en", "ui.tutorial.return_cart", "At the store, open cart management with E again and select “Return to warehouse”."),
+                ("en", "ui.tutorial.unload", "At the warehouse, approach the loaded cart and press E. In “Cart → Warehouse”, transfer resources or select “Unload all”."),
+                ("en", "ui.tutorial.construction", "Approach the construction sign and press E. Select the available project and press “Start construction”."),
+                ("en", "ui.tutorial.hit_goblin", "HIT A GOBLIN: get within 5 metres of a working goblin and press E or Left Mouse. The hit temporarily speeds up construction."),
+                ("en", "ui.tutorial.wait_construction", "Construction is underway. After the cooldown, hit available goblins again with E or Left Mouse. Wait for 100%."),
+                ("en", "ui.tutorial.economy", "Press M to open the economy and upgrades menu. Press M again or Escape to close it."),
+                ("en", "ui.tutorial.completed", "Core loop learned: client → payment → materials → warehouse → construction → upgrades. F5 saves and F9 loads.")
+            };
+
+            foreach (var entry in entries)
+                settings.EnsureTranslation(entry.Item1, entry.Item2, entry.Item3);
+
+            EditorUtility.SetDirty(settings);
+        }
+
         private static void EnsureStage36Translations(GameLocalizationSettings settings)
         {
             var entries = new[]
@@ -4486,6 +4602,192 @@ namespace HorseParking.Presentation.Editor
             rect.anchorMax = anchorMax;
             rect.pivot = pivot;
             rect.anchoredPosition = anchoredPosition;
+        }
+
+        private static void CreateGameSaveHud(GameCompositionRoot compositionRoot)
+        {
+            var existing = GameObject.Find("GameSaveHUD");
+            if (existing != null) Object.DestroyImmediate(existing);
+
+            var canvasObject = new GameObject("GameSaveHUD", typeof(Canvas), typeof(CanvasScaler));
+            var canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 24;
+
+            var scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.5f;
+
+            var panelObject = new GameObject(
+                "SavePanel",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            panelObject.transform.SetParent(canvasObject.transform, false);
+            var panelRect = panelObject.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(1f, 0f);
+            panelRect.anchorMax = new Vector2(1f, 0f);
+            panelRect.pivot = new Vector2(1f, 0f);
+            panelRect.anchoredPosition = new Vector2(-18f, 18f);
+            panelRect.sizeDelta = new Vector2(430f, 76f);
+            var panelImage = panelObject.GetComponent<Image>();
+            panelImage.color = new Color(0.10f, 0.065f, 0.035f, 0.88f);
+            panelImage.raycastTarget = false;
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var shortcuts = CreateHudText(
+                panelObject.transform,
+                "Shortcuts",
+                font,
+                18,
+                FontStyle.Bold,
+                new Vector2(14f, -9f),
+                new Vector2(402f, 26f));
+            shortcuts.alignment = TextAnchor.MiddleCenter;
+
+            var status = CreateHudText(
+                panelObject.transform,
+                "Status",
+                font,
+                17,
+                FontStyle.Normal,
+                new Vector2(14f, -39f),
+                new Vector2(402f, 24f));
+            status.alignment = TextAnchor.MiddleCenter;
+            status.color = new Color(0.72f, 0.95f, 0.66f, 1f);
+            status.text = string.Empty;
+
+            var presenter = canvasObject.AddComponent<GameSavePresenter>();
+            presenter.Configure(compositionRoot, shortcuts, status);
+        }
+
+        private static void CreateFirstMinutesTutorialHud(
+            GameCompositionRoot compositionRoot,
+            FirstPersonPlayerController playerController)
+        {
+            var existing = GameObject.Find("FirstMinutesTutorialHUD");
+            if (existing != null) Object.DestroyImmediate(existing);
+
+            var canvasObject = new GameObject(
+                "FirstMinutesTutorialHUD",
+                typeof(Canvas),
+                typeof(CanvasScaler));
+            var canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 28;
+
+            var scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.5f;
+
+            var panelObject = new GameObject(
+                "TutorialPanel",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            panelObject.transform.SetParent(canvasObject.transform, false);
+            var panelRect = panelObject.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0f);
+            panelRect.anchorMax = new Vector2(0.5f, 0f);
+            panelRect.pivot = new Vector2(0.5f, 0f);
+            panelRect.anchoredPosition = new Vector2(0f, 24f);
+            panelRect.sizeDelta = new Vector2(860f, 150f);
+            var panelImage = panelObject.GetComponent<Image>();
+            panelImage.color = new Color(0.075f, 0.05f, 0.028f, 0.94f);
+            panelImage.raycastTarget = false;
+
+            var accentObject = new GameObject(
+                "Accent",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            accentObject.transform.SetParent(panelObject.transform, false);
+            var accentRect = accentObject.GetComponent<RectTransform>();
+            accentRect.anchorMin = new Vector2(0f, 0f);
+            accentRect.anchorMax = new Vector2(0f, 1f);
+            accentRect.pivot = new Vector2(0f, 0.5f);
+            accentRect.anchoredPosition = Vector2.zero;
+            accentRect.sizeDelta = new Vector2(7f, 0f);
+            accentObject.GetComponent<Image>().color = new Color(0.95f, 0.58f, 0.10f, 1f);
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var title = CreateHudText(
+                panelObject.transform,
+                "Title",
+                font,
+                20,
+                FontStyle.Bold,
+                new Vector2(24f, -10f),
+                new Vector2(812f, 26f));
+            title.color = new Color(1f, 0.67f, 0.18f, 1f);
+
+            var instruction = CreateHudText(
+                panelObject.transform,
+                "Instruction",
+                font,
+                20,
+                FontStyle.Normal,
+                new Vector2(24f, -39f),
+                new Vector2(812f, 68f));
+            instruction.color = new Color(0.98f, 0.94f, 0.84f, 1f);
+            instruction.verticalOverflow = VerticalWrapMode.Truncate;
+
+            var footer = CreateHudText(
+                panelObject.transform,
+                "Footer",
+                font,
+                15,
+                FontStyle.Normal,
+                new Vector2(24f, -110f),
+                new Vector2(812f, 22f));
+            footer.color = new Color(0.72f, 0.70f, 0.64f, 1f);
+            footer.alignment = TextAnchor.MiddleRight;
+
+            var progressBackground = new GameObject(
+                "ProgressBackground",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            progressBackground.transform.SetParent(panelObject.transform, false);
+            var progressBackgroundRect = progressBackground.GetComponent<RectTransform>();
+            progressBackgroundRect.anchorMin = new Vector2(0f, 0f);
+            progressBackgroundRect.anchorMax = new Vector2(1f, 0f);
+            progressBackgroundRect.pivot = new Vector2(0.5f, 0f);
+            progressBackgroundRect.anchoredPosition = new Vector2(0f, 0f);
+            progressBackgroundRect.sizeDelta = new Vector2(0f, 7f);
+            progressBackground.GetComponent<Image>().color = new Color(0.18f, 0.13f, 0.08f, 1f);
+
+            var progressFillObject = new GameObject(
+                "ProgressFill",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            progressFillObject.transform.SetParent(progressBackground.transform, false);
+            var progressFillRect = progressFillObject.GetComponent<RectTransform>();
+            progressFillRect.anchorMin = Vector2.zero;
+            progressFillRect.anchorMax = Vector2.one;
+            progressFillRect.offsetMin = Vector2.zero;
+            progressFillRect.offsetMax = Vector2.zero;
+            var progressFill = progressFillObject.GetComponent<Image>();
+            progressFill.color = new Color(0.95f, 0.58f, 0.10f, 1f);
+            progressFill.type = Image.Type.Filled;
+            progressFill.fillMethod = Image.FillMethod.Horizontal;
+            progressFill.fillOrigin = 0;
+            progressFill.fillAmount = 0f;
+            progressFill.raycastTarget = false;
+
+            canvasObject.AddComponent<FirstMinutesTutorialPresenter>().Configure(
+                compositionRoot,
+                playerController,
+                panelObject,
+                title,
+                instruction,
+                footer,
+                progressFill);
         }
 
         private static void CreateLogisticsInventoryHud(GameCompositionRoot compositionRoot)

@@ -72,6 +72,18 @@ namespace HorseParking.Core.Economy
             return true;
         }
 
+        /// <summary>
+        /// Restores an already validated persisted balance without recording a new
+        /// income or expense. Loading progress must not create a fake transaction.
+        /// </summary>
+        public void RestoreBalance(int balance)
+        {
+            if (balance < 0) throw new ArgumentOutOfRangeException(nameof(balance));
+            Balance = balance;
+            LastTransaction = null;
+            BalanceChanged?.Invoke();
+        }
+
         private void Record(
             GoldTransactionKind kind,
             int signedAmount,

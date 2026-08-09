@@ -157,6 +157,44 @@ namespace HorseParking.Application.Logistics
 
         public InventorySnapshot GetCartSnapshot() => CreateSnapshot(cart.Cargo);
 
+        public bool TryRestoreProgress(
+            int gold,
+            int warehouseCapacityUnits,
+            IReadOnlyDictionary<ResourceId, int> warehouseContents,
+            int cartCapacityUnits,
+            IReadOnlyDictionary<ResourceId, int> cartContents)
+        {
+            if (!CanRestoreProgress(
+                    gold,
+                    warehouseCapacityUnits,
+                    warehouseContents,
+                    cartCapacityUnits,
+                    cartContents)
+                || !TryCreateRestoredEntries(warehouseCapacityUnits, warehouseContents, out var warehouseEntries)
+                || !TryCreateRestoredEntries(cartCapacityUnits, cartContents, out var cartEntries))
+            {
+                return false;
+            }
+
+            warehouse.Inventory.ReplaceState(warehouseCapacityUnits, warehouseEntries);
+            cart.Cargo.ReplaceState(cartCapacityUnits, cartEntries);
+            wallet.RestoreBalance(gold);
+            NotifyInventoryTransfer();
+            return true;
+        }
+
+        public bool CanRestoreProgress(
+            int gold,
+            int warehouseCapacityUnits,
+            IReadOnlyDictionary<ResourceId, int> warehouseContents,
+            int cartCapacityUnits,
+            IReadOnlyDictionary<ResourceId, int> cartContents)
+        {
+            return gold >= 0
+                && TryCreateRestoredEntries(warehouseCapacityUnits, warehouseContents, out _)
+                && TryCreateRestoredEntries(cartCapacityUnits, cartContents, out _);
+        }
+
         public InventoryOperationResult TryLoadCart(ResourceId resourceId, int quantity)
         {
             if (!resourceCatalog.TryGet(resourceId, out _))
@@ -321,6 +359,29 @@ namespace HorseParking.Application.Logistics
                 inventory.CapacityUnits,
                 inventory.UsedCapacityUnits,
                 items.AsReadOnly());
+        }
+
+        private bool TryCreateRestoredEntries(
+            int capacityUnits,
+            IReadOnlyDictionary<ResourceId, int> contents,
+            out IReadOnlyList<InventoryStateEntry> restoredEntries)
+        {
+            var entries = new List<InventoryStateEntry>();
+            restoredEntries = entries;
+            if (capacityUnits <= 0 || contents == null) return false;
+
+            var usedCapacityUnits = 0;
+            foreach (var pair in contents)
+            {
+                if (pair.Value < 0 || !resourceCatalog.TryGet(pair.Key, out var definition)) return false;
+                if (pair.Value == 0) continue;
+                usedCapacityUnits = checked(
+                    usedCapacityUnits + definition.CapacityPerUnit * pair.Value);
+                if (usedCapacityUnits > capacityUnits) return false;
+                entries.Add(new InventoryStateEntry(definition, pair.Value));
+            }
+
+            return true;
         }
 
         private void NotifyInventoryTransfer()

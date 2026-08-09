@@ -1,17 +1,21 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.IO;
 using HorseParking.Application.Construction;
 using HorseParking.Application.Economy;
 using HorseParking.Application.Interaction;
 using HorseParking.Application.Logistics;
+using HorseParking.Application.Onboarding;
 using HorseParking.Application.Parking;
+using HorseParking.Application.Progress;
 using HorseParking.Application.WorldEvents;
 using HorseParking.Core.Localization;
 using HorseParking.Core.Parking;
 using HorseParking.Core.Randomness;
 using HorseParking.Core.Time;
 using HorseParking.Infrastructure.Localization;
+using HorseParking.Infrastructure.Persistence;
 using HorseParking.Infrastructure.Randomness;
 using HorseParking.Infrastructure.Time;
 using HorseParking.Presentation.Logistics;
@@ -42,6 +46,8 @@ namespace HorseParking.Presentation.Composition
         private ParkingClientArchetypeSelectionUseCase? parkingClientArchetypeSelectionUseCase;
         private ParkingClientDialogueUseCase? parkingClientDialogueUseCase;
         private LivingWorldEventUseCase? livingWorldEventUseCase;
+        private GameProgressUseCase? gameProgressUseCase;
+        private TutorialFlowUseCase tutorialFlowUseCase = null!;
 
         [SerializeField] private LogisticsInventorySettings? logisticsInventorySettings;
         [SerializeField] private GameLocalizationSettings? localizationSettings;
@@ -102,6 +108,13 @@ namespace HorseParking.Presentation.Composition
         public LivingWorldEventUseCase LivingWorldEventUseCase => livingWorldEventUseCase
             ?? throw new System.InvalidOperationException("Living-world events are not configured.");
 
+        public bool HasGameProgress => gameProgressUseCase != null;
+
+        public GameProgressUseCase GameProgressUseCase => gameProgressUseCase
+            ?? throw new System.InvalidOperationException("Game progress persistence is not configured.");
+
+        public TutorialFlowUseCase TutorialFlowUseCase => tutorialFlowUseCase;
+
         public void ConfigureLogisticsInventory(LogisticsInventorySettings settings)
         {
             logisticsInventorySettings = settings;
@@ -156,6 +169,7 @@ namespace HorseParking.Presentation.Composition
                 ? parkingClientDialogueSettings.CreateUseCase(randomSource)
                 : null;
             interactWithTargetUseCase = new InteractWithTargetUseCase();
+            tutorialFlowUseCase = new TutorialFlowUseCase();
             var parkingSlot = new ParkingSlot("parking-slot-01");
             var tariff = parkingEconomySettings != null
                 ? new ParkingTariff(
@@ -175,6 +189,20 @@ namespace HorseParking.Presentation.Composition
                 livingWorldEventUseCase = livingWorldEventSettings != null
                     ? livingWorldEventSettings.CreateUseCase(logisticsInventoryUseCase, randomSource)
                     : null;
+                gameProgressUseCase = constructionRequirementsUseCase != null
+                                      && parkingEconomyUseCase != null
+                                      && cartJourneyUseCase != null
+                    ? new GameProgressUseCase(
+                        new JsonFileGameProgressRepository(Path.Combine(
+                            UnityEngine.Application.persistentDataPath,
+                            "Saves",
+                            "parking-slot-01.json")),
+                        logisticsInventoryUseCase,
+                        cartJourneyUseCase,
+                        constructionRequirementsUseCase,
+                        parkingEconomyUseCase,
+                        tutorialFlowUseCase)
+                    : null;
             }
             else
             {
@@ -183,6 +211,7 @@ namespace HorseParking.Presentation.Composition
                 constructionRequirementsUseCase = null;
                 parkingEconomyUseCase = null;
                 livingWorldEventUseCase = null;
+                gameProgressUseCase = null;
             }
         }
     }

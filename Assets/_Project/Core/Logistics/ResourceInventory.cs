@@ -52,6 +52,19 @@ namespace HorseParking.Core.Logistics
         public static PurchaseResult Failure(PurchaseFailureReason reason, int remainingGold) => new PurchaseResult(reason, remainingGold);
     }
 
+    public readonly struct InventoryStateEntry
+    {
+        public InventoryStateEntry(ResourceDefinition definition, int quantity)
+        {
+            Definition = definition ?? throw new ArgumentNullException(nameof(definition));
+            if (quantity < 0) throw new ArgumentOutOfRangeException(nameof(quantity));
+            Quantity = quantity;
+        }
+
+        public ResourceDefinition Definition { get; }
+        public int Quantity { get; }
+    }
+
     /// <summary>Capacity-limited resource storage with atomic transfers.</summary>
     public sealed class ResourceInventory
     {
@@ -96,6 +109,47 @@ namespace HorseParking.Core.Logistics
         public int GetQuantity(ResourceId resourceId)
         {
             return entries.TryGetValue(resourceId, out var entry) ? entry.Quantity : 0;
+        }
+
+        /// <summary>
+        /// Atomically replaces capacity and contents from a validated save snapshot.
+        /// The live inventory is not modified if the snapshot is invalid.
+        /// </summary>
+        public void ReplaceState(int capacityUnits, IReadOnlyList<InventoryStateEntry> stateEntries)
+        {
+            if (capacityUnits <= 0) throw new ArgumentOutOfRangeException(nameof(capacityUnits));
+            if (stateEntries == null) throw new ArgumentNullException(nameof(stateEntries));
+
+            var replacement = new Dictionary<ResourceId, Entry>();
+            var usedCapacity = 0;
+            foreach (var stateEntry in stateEntries)
+            {
+                if (stateEntry.Quantity == 0) continue;
+                if (replacement.ContainsKey(stateEntry.Definition.Id))
+                {
+                    throw new ArgumentException(
+                        "Inventory state contains duplicate resource " + stateEntry.Definition.Id.Value + ".",
+                        nameof(stateEntries));
+                }
+
+                usedCapacity = checked(
+                    usedCapacity + stateEntry.Definition.CapacityPerUnit * stateEntry.Quantity);
+                replacement.Add(
+                    stateEntry.Definition.Id,
+                    new Entry(stateEntry.Definition, stateEntry.Quantity));
+            }
+
+            if (usedCapacity > capacityUnits)
+            {
+                throw new ArgumentException(
+                    "Inventory state exceeds its saved capacity.",
+                    nameof(stateEntries));
+            }
+
+            entries.Clear();
+            foreach (var pair in replacement) entries.Add(pair.Key, pair.Value);
+            CapacityUnits = capacityUnits;
+            UsedCapacityUnits = usedCapacity;
         }
 
         public InventoryOperationResult TryAdd(ResourceDefinition definition, int quantity)
