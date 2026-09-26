@@ -1412,9 +1412,9 @@ namespace HorseParking.Presentation.Editor
             var metallic = AssetDatabase.LoadAssetAtPath<Texture2D>(MoneyBagMetallicPath)
                 ?? throw new System.InvalidOperationException(
                     "Money bag metallic texture is missing: " + MoneyBagMetallicPath);
-            var shader = GraphicsSettings.currentRenderPipeline == null
-                ? Shader.Find("Standard")
-                : Shader.Find("Universal Render Pipeline/Lit");
+            var shader = (QualitySettings.renderPipeline != null || GraphicsSettings.defaultRenderPipeline != null)
+                ? Shader.Find("Universal Render Pipeline/Lit")
+                : Shader.Find("Standard");
             shader ??= Shader.Find("Standard");
             if (shader == null)
             {
@@ -1445,9 +1445,9 @@ namespace HorseParking.Presentation.Editor
 
         private static Material LoadOrCreateMoneyBagRopeMaterial()
         {
-            var shader = GraphicsSettings.currentRenderPipeline == null
-                ? Shader.Find("Unlit/Color")
-                : Shader.Find("Universal Render Pipeline/Unlit");
+            var shader = (QualitySettings.renderPipeline != null || GraphicsSettings.defaultRenderPipeline != null)
+                ? Shader.Find("Universal Render Pipeline/Unlit")
+                : Shader.Find("Unlit/Color");
             shader ??= Shader.Find("Unlit/Color");
             if (shader == null)
             {
