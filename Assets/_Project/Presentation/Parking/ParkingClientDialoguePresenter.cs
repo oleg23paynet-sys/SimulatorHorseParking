@@ -90,7 +90,7 @@ namespace HorseParking.Presentation.Parking
                 panel.SetActive(false);
         }
 
-        private void ShowDialogue(
+        public void ShowDialogue(
             ParkingClientArchetype archetype,
             ParkingClientDialogueMoment moment)
         {

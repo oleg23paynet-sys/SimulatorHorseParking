@@ -34,6 +34,16 @@ namespace HorseParking.Presentation.Parking
         private bool waitingForNextClient;
         private ParkingClientArchetype? currentArchetype;
         private int currentClientSequence;
+        [SerializeField] private string additionalSlotId = "";
+        private HorseParking.Application.Parking.ParkingLifecycleUseCase lifecycle;
+        public bool OccupiesSpace => initialized && !waitingForNextClient;
+        public void ConfigureAdditionalSlot(string id) => additionalSlotId = id;
+        public void ReleaseDetachedRider()
+        {
+            if (!string.IsNullOrEmpty(additionalSlotId) && riderSequence != null
+                && !riderSequence.transform.IsChildOf(transform.root))
+                Destroy(riderSequence.gameObject);
+        }
 
         public bool CanCollectPayment => initialized && paymentRequested && !paymentCollected;
 
@@ -71,6 +81,9 @@ namespace HorseParking.Presentation.Parking
 
             paymentSackVisual.SetActive(false);
             clientVisual.SetActive(true);
+            lifecycle = string.IsNullOrEmpty(additionalSlotId)
+                ? compositionRoot.ParkingLifecycleUseCase
+                : compositionRoot.CreateAdditionalParkingSlot(additionalSlotId);
             initialized = true;
             if (routePresenter == null)
             {
@@ -133,8 +146,8 @@ namespace HorseParking.Presentation.Parking
 
             ParkingPayment payment;
             var collected = currentArchetype != null
-                ? compositionRoot.ParkingLifecycleUseCase.TryCollectPayment(currentArchetype.Tariff, out payment)
-                : compositionRoot.ParkingLifecycleUseCase.TryCollectPayment(out payment);
+                ? lifecycle.TryCollectPayment(currentArchetype.Tariff, out payment)
+                : lifecycle.TryCollectPayment(out payment);
             if (!collected)
             {
                 return false;
@@ -185,7 +198,7 @@ namespace HorseParking.Presentation.Parking
             var clientId = currentArchetype != null
                 ? "client-" + currentArchetype.Id
                 : "client-mounted-01";
-            if (!compositionRoot.ParkingLifecycleUseCase.TryPark(clientId))
+            if (!lifecycle.TryPark(clientId))
             {
                 Debug.LogError("Parking MVP could not park the arriving client.", this);
                 return;
@@ -211,7 +224,7 @@ namespace HorseParking.Presentation.Parking
                 return;
             }
 
-            paymentRequested = compositionRoot.ParkingLifecycleUseCase.TryRequestPayment();
+            paymentRequested = lifecycle.TryRequestPayment();
             if (!paymentRequested)
             {
                 Debug.LogError("Parking MVP could not request payment.", this);
@@ -229,7 +242,7 @@ namespace HorseParking.Presentation.Parking
 
         public void NotifyClientExited()
         {
-            if (!compositionRoot.ParkingLifecycleUseCase.TryReleaseClient())
+            if (!lifecycle.TryReleaseClient())
             {
                 Debug.LogError("Parking MVP could not release the paid client.", this);
                 return;

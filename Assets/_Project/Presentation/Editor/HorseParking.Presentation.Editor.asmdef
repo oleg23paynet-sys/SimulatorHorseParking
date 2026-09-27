@@ -3,6 +3,8 @@
   "rootNamespace": "HorseParking.Presentation.Editor",
   "references": [
     "HorseParking.Presentation",
+    "HorseParking.Application",
+    "HorseParking.Core",
     "Unity.AI.Navigation"
   ],
   "includePlatforms": ["Editor"],

@@ -68,6 +68,12 @@ namespace HorseParking.Presentation.Composition
         /// <summary>Injected application boundary for the single-slot parking MVP.</summary>
         public ParkingLifecycleUseCase ParkingLifecycleUseCase => parkingLifecycleUseCase;
 
+        public ParkingLifecycleUseCase CreateAdditionalParkingSlot(string slotId) =>
+            new ParkingLifecycleUseCase(new ParkingSlot(slotId),
+                parkingEconomySettings != null
+                    ? new ParkingTariff(parkingEconomySettings.BillingPeriodSeconds, parkingEconomySettings.GoldPerBillingPeriod)
+                    : new ParkingTariff(20d, 3), gameClock);
+
         public bool HasLogisticsInventory => logisticsInventoryUseCase != null;
 
         /// <summary>Injected application boundary for the Stage 3 warehouse and starter cart.</summary>

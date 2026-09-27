@@ -64,7 +64,23 @@ namespace HorseParking.Presentation.Construction
         private bool hasSpawnReservation;
         private Vector3 visualRestLocalPosition;
         private Quaternion visualRestLocalRotation;
+        private float emergenceDepth;
         private readonly List<int> shuffledSpawnPointIndices = new();
+
+        private void Awake()
+        {
+            if (workerVisualRoot == null) return;
+            visualRestLocalPosition = workerVisualRoot.localPosition;
+            visualRestLocalRotation = workerVisualRoot.localRotation;
+        }
+
+        private void LateUpdate()
+        {
+            // Apply after Animator so its root pose cannot cancel the underground trajectory.
+            if (phase == WorkerPhase.VortexLeadIn) PrepareEmergenceVisual();
+            else if (phase == WorkerPhase.Emerging) UpdateEmergenceVisual();
+            else if (phase == WorkerPhase.Disappearing) UpdateDisappearanceVisual();
+        }
 
         public bool HasReachedBuildPoint { get; private set; }
         public bool IsBuildingNow { get; private set; }
@@ -183,7 +199,7 @@ namespace HorseParking.Presentation.Construction
                     if (Time.time >= phaseEndsAt)
                     {
                         ResetVisualPose();
-                        StopGroundVortex();
+                        StopGroundVortex(false);
                         if (!EnableNavigationAt(sampledSpawnPoint))
                         {
                             SetWorkerVisible(false);
@@ -252,6 +268,7 @@ namespace HorseParking.Presentation.Construction
         private void OnDisable()
         {
             ReleaseSpawnReservation();
+            StopGroundVortex();
         }
 
         private void TryStartApproach()
@@ -266,6 +283,9 @@ namespace HorseParking.Presentation.Construction
             transform.SetPositionAndRotation(
                 sampledSpawnPoint,
                 LookTowards(sampledSpawnPoint, sampledBuildPoint));
+            emergenceDepth = Mathf.Max(spawnSinkDepth, navigationAgent.height + 0.25f);
+            foreach (var renderer in workerVisualRoot.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                emergenceDepth = Mathf.Max(emergenceDepth, renderer.bounds.max.y - transform.position.y + 0.2f);
             PrepareEmergenceVisual();
             workerAnimator.speed = 0f;
             SetAnimatorState(
@@ -288,7 +308,7 @@ namespace HorseParking.Presentation.Construction
         {
             if (workerVisualRoot == null) return;
             workerVisualRoot.localPosition =
-                visualRestLocalPosition + Vector3.down * spawnSinkDepth;
+                visualRestLocalPosition + transform.InverseTransformVector(Vector3.down * emergenceDepth);
             workerVisualRoot.localRotation = visualRestLocalRotation;
         }
 
@@ -300,11 +320,11 @@ namespace HorseParking.Presentation.Construction
                 phaseEndsAt,
                 Time.time);
             var rise = Mathf.SmoothStep(0f, 1f, normalizedTime);
-            var heightOffset = Mathf.Lerp(-spawnSinkDepth, 0f, rise);
+            var heightOffset = Mathf.Lerp(-emergenceDepth, 0f, rise);
 
             workerVisualRoot.localPosition =
-                visualRestLocalPosition + Vector3.up * heightOffset;
-            workerVisualRoot.localRotation = visualRestLocalRotation;
+                visualRestLocalPosition + transform.InverseTransformVector(Vector3.up * heightOffset);
+            workerVisualRoot.localRotation = Quaternion.AngleAxis(720f * (rise - 1f), Vector3.up) * visualRestLocalRotation;
         }
 
         private void PrepareDisappearanceVisual()
@@ -694,24 +714,36 @@ namespace HorseParking.Presentation.Construction
         private void PlayGroundVortex()
         {
             if (groundVortex == null) return;
-            groundVortex.transform.position = transform.position + Vector3.up * 0.025f;
+            var surface = transform.position;
+            // NavMesh can sit slightly above terrain. Anchor the aperture to the actual surface.
+            var hits = Physics.RaycastAll(surface + Vector3.up * 0.5f, Vector3.down, 2f, spawnBlockingMask, QueryTriggerInteraction.Ignore);
+            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+            foreach (var hit in hits)
+            {
+                if (hit.collider.transform.IsChildOf(transform) || hit.normal.y < 0.7f) continue;
+                surface = hit.point;
+                break;
+            }
+            groundVortex.transform.position = surface + Vector3.up * 0.025f;
             groundVortex.SetActive(true);
             foreach (var system in vortexSystems)
             {
-                system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                system.Play(true);
+                system.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+                var main = system.main;
+                main.prewarm = false;
+                system.Play(false);
             }
         }
 
-        private void StopGroundVortex()
+        private void StopGroundVortex(bool immediate = true)
         {
             if (groundVortex == null) return;
             foreach (var system in vortexSystems)
             {
-                system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                system.Stop(false, immediate ? ParticleSystemStopBehavior.StopEmittingAndClear : ParticleSystemStopBehavior.StopEmitting);
             }
 
-            groundVortex.SetActive(false);
+            if (immediate) groundVortex.SetActive(false);
         }
 
         private void SetHammerVisible(bool visible)

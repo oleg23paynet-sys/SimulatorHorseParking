@@ -25,7 +25,7 @@ namespace HorseParking.Presentation.Editor
         public static void Install()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Stop Play Mode first.");
-            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            if (!UnityEngine.Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             var gameScene = EditorSceneManager.OpenScene(ScenePath);
             var gameplay = Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .Where(x => x != null && x.GetType().Namespace?.StartsWith("HorseParking") == true)
