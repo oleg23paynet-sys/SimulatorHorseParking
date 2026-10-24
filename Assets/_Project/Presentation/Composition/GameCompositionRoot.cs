@@ -195,7 +195,8 @@ namespace HorseParking.Presentation.Composition
                 livingWorldEventUseCase = livingWorldEventSettings != null
                     ? livingWorldEventSettings.CreateUseCase(logisticsInventoryUseCase, randomSource)
                     : null;
-                gameProgressUseCase = constructionRequirementsUseCase != null
+                gameProgressUseCase = HorseParking.Presentation.Progress.PrototypeSessionPolicy.PersistenceEnabled
+                                      && constructionRequirementsUseCase != null
                                       && parkingEconomyUseCase != null
                                       && cartJourneyUseCase != null
                     ? new GameProgressUseCase(

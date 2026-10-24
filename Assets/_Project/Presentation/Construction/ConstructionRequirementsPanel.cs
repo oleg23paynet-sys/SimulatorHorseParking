@@ -96,6 +96,8 @@ namespace HorseParking.Presentation.Construction
             inventoryUseCase = compositionRoot.LogisticsInventoryUseCase;
             interactionTarget.InteractionRequested += Open;
             inventoryUseCase.WarehouseInventoryChanged += Refresh;
+            requirementsUseCase.ConstructionStarted += Refresh;
+            requirementsUseCase.ConstructionCompleted += Refresh;
             projectOptionButton.onClick.AddListener(SelectProject);
             startButton.onClick.AddListener(ConfirmRequirements);
             closeButton.onClick.AddListener(Close);
@@ -107,6 +109,11 @@ namespace HorseParking.Presentation.Construction
         {
             if (interactionTarget != null) interactionTarget.InteractionRequested -= Open;
             if (inventoryUseCase != null) inventoryUseCase.WarehouseInventoryChanged -= Refresh;
+            if (requirementsUseCase != null)
+            {
+                requirementsUseCase.ConstructionStarted -= Refresh;
+                requirementsUseCase.ConstructionCompleted -= Refresh;
+            }
         }
 
         private void Update()
@@ -117,8 +124,10 @@ namespace HorseParking.Presentation.Construction
         private void Open()
         {
             feedbackOverrideKey = null;
-            isProjectSelected = false;
-            previewPresenter?.SetPlannedPreviewVisible(false);
+            // This panel has exactly one project; opening it selects that project,
+            // even before materials arrive. Only the start action requires resources.
+            isProjectSelected = requirementsUseCase.GetSnapshot().State == ConstructionState.Planned;
+            previewPresenter?.SetPlannedPreviewVisible(isProjectSelected);
             isOpen = true;
             panelRoot.SetActive(true);
             playerController.SetUiInputBlocked(true);
@@ -158,7 +167,7 @@ namespace HorseParking.Presentation.Construction
         private void SelectProject()
         {
             var snapshot = requirementsUseCase.GetSnapshot();
-            if (!snapshot.CanStart) return;
+            if (snapshot.State != ConstructionState.Planned) return;
 
             isProjectSelected = true;
             feedbackOverrideKey = null;
@@ -171,7 +180,7 @@ namespace HorseParking.Presentation.Construction
             if (!isOpen) return;
 
             var snapshot = requirementsUseCase.GetSnapshot();
-            if (!snapshot.CanStart && isProjectSelected)
+            if (snapshot.State != ConstructionState.Planned && isProjectSelected)
             {
                 isProjectSelected = false;
                 previewPresenter?.SetPlannedPreviewVisible(false);
@@ -182,7 +191,7 @@ namespace HorseParking.Presentation.Construction
 
             titleText.text = localization.Translate(new LocalizationKey("ui.construction.title"));
             projectText.text = localization.Translate(
-                new LocalizationKey("ui.construction.choose_project"));
+                snapshot.PlanDisplayNameKey);
             projectOptionText.text = localization.Translate(
                 new LocalizationKey(snapshot.CanStart
                     ? "ui.construction.option.available"
@@ -191,8 +200,7 @@ namespace HorseParking.Presentation.Construction
                 {
                     ["project"] = localization.Translate(snapshot.PlanDisplayNameKey)
                 });
-            projectOptionButton.interactable = snapshot.CanStart
-                && snapshot.State == ConstructionState.Planned;
+            projectOptionButton.interactable = snapshot.State == ConstructionState.Planned;
             requirementsHeadingText.text = localization.Translate(
                 new LocalizationKey("ui.construction.requirements"));
             startButtonText.text = localization.Translate(new LocalizationKey("ui.construction.start"));

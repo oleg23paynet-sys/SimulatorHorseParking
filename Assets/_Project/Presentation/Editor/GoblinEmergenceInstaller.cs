@@ -25,10 +25,12 @@ namespace HorseParking.Presentation.Editor
                 var force = swirl.forceOverLifetime; force.enabled = false;
                 var noise = swirl.noise; noise.enabled = false;
                 var shape = swirl.shape; shape.enabled = false;
-                var emission = swirl.emission; emission.enabled = true; emission.rateOverTime = 14f; emission.SetBursts(new ParticleSystem.Burst[0]);
+                // Retain the prefab root for existing scene references, but never draw a portal.
+                var emission = swirl.emission; emission.enabled = false; emission.rateOverTime = 0f; emission.SetBursts(new ParticleSystem.Burst[0]);
                 var rotation = swirl.rotationOverLifetime; rotation.enabled = true; rotation.z = 4f;
                 var size = swirl.sizeOverLifetime; size.enabled = false;
                 var renderer = swirl.GetComponent<ParticleSystemRenderer>();
+                renderer.enabled = false;
                 renderer.renderMode = ParticleSystemRenderMode.Billboard;
                 renderer.alignment = ParticleSystemRenderSpace.Local;
                 // The existing prefab is oriented -90 degrees around X: its XY plane lies on the ground.
@@ -42,16 +44,17 @@ namespace HorseParking.Presentation.Editor
                 var rockMain = rocks.main;
                 rockMain.loop = true; rockMain.playOnAwake = false; rockMain.prewarm = false;
                 rockMain.simulationSpace = ParticleSystemSimulationSpace.World;
-                rockMain.startLifetime = new ParticleSystem.MinMaxCurve(.5f, .8f);
-                rockMain.startSpeed = new ParticleSystem.MinMaxCurve(2.3f, 3.8f);
+                rockMain.startLifetime = new ParticleSystem.MinMaxCurve(.7f, 1.1f);
+                rockMain.startSpeed = new ParticleSystem.MinMaxCurve(3.5f, 5f);
                 rockMain.startSize = new ParticleSystem.MinMaxCurve(.07f, .16f);
                 rockMain.gravityModifier = 1.3f; rockMain.maxParticles = 64;
                 rockMain.startRotation3D = true;
                 rockMain.startRotationX = new ParticleSystem.MinMaxCurve(0f, 6f);
                 rockMain.startRotationY = new ParticleSystem.MinMaxCurve(0f, 6f);
-                var rockEmission = rocks.emission; rockEmission.rateOverTime = 36f;
+                var rockEmission = rocks.emission; rockEmission.rateOverTime = 48f;
                 var rockShape = rocks.shape; rockShape.enabled = true; rockShape.shapeType = ParticleSystemShapeType.Cone;
-                rockShape.angle = 58f; rockShape.radius = .32f; rockShape.radiusThickness = .8f;
+                rockShape.angle = 62f; rockShape.radius = .32f; rockShape.radiusThickness = 0f;
+                rockShape.arc = 360f; rockShape.arcMode = ParticleSystemShapeMultiModeValue.Loop; rockShape.arcSpeed = 3f;
                 var spin = rocks.rotationOverLifetime; spin.enabled = true; spin.separateAxes = true; spin.x = 5f; spin.y = 7f; spin.z = 3f;
                 var collision = rocks.collision; collision.enabled = true; collision.type = ParticleSystemCollisionType.World;
                 collision.mode = ParticleSystemCollisionMode.Collision3D; collision.collidesWith = 1;
@@ -66,9 +69,26 @@ namespace HorseParking.Presentation.Editor
                 if (material == null) { material = new Material(Shader.Find("Universal Render Pipeline/Lit")); AssetDatabase.CreateAsset(material, matPath); }
                 material.SetColor("_BaseColor", new Color(.23f, .20f, .15f)); material.SetFloat("_Smoothness", .05f);
                 EditorUtility.SetDirty(material); rockRenderer.sharedMaterial = material;
+                var oldSoil = root.transform.Find("GroundSoil");
+                if (oldSoil != null) Object.DestroyImmediate(oldSoil.gameObject);
+                var soilObject = Object.Instantiate(debris, root.transform);
+                soilObject.name = "GroundSoil";
+                var soil = soilObject.GetComponent<ParticleSystem>();
+                var soilMain = soil.main;
+                soilMain.startSize = new ParticleSystem.MinMaxCurve(.025f / mesh.bounds.size.magnitude, .09f / mesh.bounds.size.magnitude);
+                soilMain.startSpeed = new ParticleSystem.MinMaxCurve(2.5f, 4f);
+                soilMain.maxParticles = 128;
+                var soilEmission = soil.emission; soilEmission.rateOverTime = 95f;
+                var soilShape = soil.shape; soilShape.radius = .4f; soilShape.angle = 70f;
+                const string soilMatPath = "Assets/_Project/Content/VFX/GoblinSpawn/Materials/GroundSoil.mat";
+                var soilMaterial = AssetDatabase.LoadAssetAtPath<Material>(soilMatPath);
+                if (soilMaterial == null) { soilMaterial = new Material(material); AssetDatabase.CreateAsset(soilMaterial, soilMatPath); }
+                soilMaterial.SetColor("_BaseColor", new Color(.11f, .065f, .025f));
+                EditorUtility.SetDirty(soilMaterial);
+                soil.GetComponent<ParticleSystemRenderer>().sharedMaterial = soilMaterial;
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
                 AssetDatabase.SaveAssets();
-                Debug.Log("GOBLIN_EMERGENCE_INSTALLED: ground-aligned swirl and continuous ballistic stone emission.");
+                Debug.Log("GOBLIN_EMERGENCE_INSTALLED: no visible vortex; stones and soil thrown outward in a full circle.");
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }
         }

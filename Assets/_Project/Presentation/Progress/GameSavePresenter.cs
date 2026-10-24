@@ -38,6 +38,13 @@ namespace HorseParking.Presentation.Progress
 
         private IEnumerator Start()
         {
+            if (!PrototypeSessionPolicy.PersistenceEnabled)
+            {
+                if (shortcutsText != null) shortcutsText.text = string.Empty;
+                if (statusText != null) statusText.text = string.Empty;
+                enabled = false;
+                yield break;
+            }
             if (compositionRoot == null
                 || !compositionRoot.HasGameProgress
                 || shortcutsText == null

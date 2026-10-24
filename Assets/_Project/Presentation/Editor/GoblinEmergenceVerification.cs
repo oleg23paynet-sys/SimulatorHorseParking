@@ -61,9 +61,12 @@ namespace HorseParking.Presentation.Editor
       Require(visual.position.y<worker.transform.position.y-.2f,"Halfway model still intersects soil");
       Require(Quaternion.Angle(visual.localRotation,(Quaternion)Read("visualRestLocalRotation"))>5f,"Goblin spins while rising");
       var swirl=effect.GetComponentInChildren<ParticleSystem>();
-      Require(swirl.GetComponent<ParticleSystemRenderer>().alignment==ParticleSystemRenderSpace.Local,"Swirl lies on soil instead of facing camera");
+      Require(!swirl.GetComponent<ParticleSystemRenderer>().enabled && !swirl.emission.enabled,"No visible vortex or portal");
       var rocks=effect.GetComponentsInChildren<ParticleSystem>().Single(p=>p.name=="GroundDebris");
       Require(rocks.particleCount>0,"Rocks emitted throughout rise");
+      var soil=effect.GetComponentsInChildren<ParticleSystem>().Single(p=>p.name=="GroundSoil");
+      Require(soil.particleCount>0,"Soil clods emitted throughout rise");
+      Require(rocks.shape.arc==360f && rocks.shape.arcMode==ParticleSystemShapeMultiModeValue.Loop,"Debris sweeps a full circle");
       Debug.Log("GOBLIN_MID particles="+rocks.particleCount+" visual="+visual.position+" surface="+effect.transform.position);
       mid=true; Capture("02-emerging");
      }
@@ -73,7 +76,7 @@ namespace HorseParking.Presentation.Editor
     {
      Require(underground&&mid&&late,"Full emergence observed");
      Require(effect.GetComponentsInChildren<ParticleSystem>().All(p=>!p.isEmitting),"Emission stops after emergence");
-     Debug.Log("GOBLIN_VERIFY_OK: underground start, rising spin, ground swirl, flying rocks, navigation/build arrival."); Finish();
+     Debug.Log("GOBLIN_VERIFY_OK: underground start, rising spin, no visible vortex, circular rocks and soil, navigation/build arrival."); Finish();
     }
     if(elapsed>45)throw new Exception("Worker did not reach building; phase="+phase);
    }
