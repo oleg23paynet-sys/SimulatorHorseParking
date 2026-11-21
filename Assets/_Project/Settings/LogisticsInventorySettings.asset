@@ -16,8 +16,8 @@ MonoBehaviour:
   warehouseCapacityUnits: 200
   cartId: cart-starter
   cartCapacityUnits: 32
-  startingGold: 30
-  demoModeEnabled: 1
+  startingGold: 10
+  demoModeEnabled: 0
   demoStartingGold: 500
   materialStoreId: material-store
   materialStoreNameKey: location.material_store

@@ -36,6 +36,9 @@ namespace HorseParking.Presentation.Parking
         private int currentClientSequence;
         [SerializeField] private string additionalSlotId = "";
         private HorseParking.Application.Parking.ParkingLifecycleUseCase lifecycle;
+        private ParkingArrivalQueue arrivals;
+        public int CompletedVisits { get; private set; }
+        public int PaymentsCollected { get; private set; }
         public bool OccupiesSpace => initialized && !waitingForNextClient;
         public void ConfigureAdditionalSlot(string id) => additionalSlotId = id;
         public void ReleaseDetachedRider()
@@ -94,17 +97,18 @@ namespace HorseParking.Presentation.Parking
 
             routePresenter.BindCallbacks(NotifyClientParked, NotifyClientAtPaymentGate, NotifyClientExited);
             riderSequence.BindReadyForDeparture(NotifyRiderReadyForDeparture);
-            SelectNextArchetype();
-            routePresenter.BeginArrival();
-            RequestDialogue(ParkingClientDialogueMoment.Arriving);
-            Debug.Log("Parking: client is arriving.");
+            arrivals = FindAnyObjectByType<ParkingArrivalQueue>();
+            waitingForNextClient = true;
+            clientVisual.SetActive(false);
+            nextClientArrivalAtSeconds = compositionRoot.GameClock.ElapsedSeconds;
         }
 
         private void Update()
         {
             if (waitingForNextClient)
             {
-                if (compositionRoot.GameClock.ElapsedSeconds >= nextClientArrivalAtSeconds)
+                if (compositionRoot.GameClock.ElapsedSeconds >= nextClientArrivalAtSeconds
+                    && (arrivals == null || arrivals.TryAdmit()))
                 {
                     BeginNextClient();
                 }
@@ -154,6 +158,7 @@ namespace HorseParking.Presentation.Parking
             }
 
             collectedGold = payment.Gold;
+            PaymentsCollected++;
             paymentCollected = true;
             if (compositionRoot.HasLogisticsInventory)
             {
@@ -248,6 +253,7 @@ namespace HorseParking.Presentation.Parking
                 return;
             }
             clientVisual.SetActive(false);
+            CompletedVisits++;
             waitingForNextClient = true;
             nextClientArrivalAtSeconds = compositionRoot.GameClock.ElapsedSeconds
                                          + compositionRoot.ClientRespawnDelaySeconds;

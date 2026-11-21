@@ -30,6 +30,13 @@ namespace HorseParking.Presentation.Editor
    {
     var elapsed=EditorApplication.timeSinceStartup-start;if(elapsed<3)return;
     var root=Object.FindAnyObjectByType<GameCompositionRoot>();var expansion=Object.FindAnyObjectByType<ParkingExpansionPresenter>();
+    if(stage==0 && root.LogisticsInventoryUseCase.Gold<22)
+    {
+     foreach(var client in Object.FindObjectsByType<ParkingMvpRuntimeController>())
+     {if(client.CanCollectPayment)client.TryCollectPayment();if(client.CanOpenExit)client.TryOpenExit();}
+     if(elapsed>180)throw new Exception("Unable to earn construction budget");
+     return;
+    }
     if(stage==0)
     {
      Require(!root.HasGameProgress,"No persistence repository in prototype mode");
@@ -58,7 +65,7 @@ namespace HorseParking.Presentation.Editor
     {
      Require(Fingerprint()==saveBefore,"Old save untouched");Debug.Log("CLEAN_SESSION_VERIFY_OK: fresh start, persistence disabled, selected buildings, resource purchase/unload, natural worker construction, second parking slot, old save unchanged.");Finish();
     }
-    if(elapsed>75)throw new Exception("Construction timeout: "+root.ConstructionRequirementsUseCase.GetSnapshot().State);
+    if(elapsed>240)throw new Exception("Construction timeout: "+root.ConstructionRequirementsUseCase.GetSnapshot().State);
    }catch(Exception e){errors++;Debug.LogException(e);Finish();}
   }
   static void Finish(){EditorApplication.update-=Tick;SessionState.SetBool("VerifyCleanSession",false);Debug.Log("CONSTRUCTION_PANEL_VERIFY errors="+errors);if(UnityEngine.Application.isBatchMode)EditorApplication.Exit(errors==0?0:1);else EditorApplication.isPlaying=false;}

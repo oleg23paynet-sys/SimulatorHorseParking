@@ -188,7 +188,7 @@ namespace HorseParking.Presentation.Logistics
         {
             if (inventoryUseCase.GetCartSnapshot().UsedCapacityUnits > 0) return;
             Close();
-            journeyUseCase.TryDispatch(materialStoreId);
+            // Leave the empty cart at the warehouse until the player orders another trip.
         }
 
         private void Refresh()

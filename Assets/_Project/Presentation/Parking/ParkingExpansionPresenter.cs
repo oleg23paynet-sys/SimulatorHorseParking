@@ -39,6 +39,9 @@ namespace HorseParking.Presentation.Parking
             var key=Occupied>=Capacity ? (built ? "parking.capacity.full" : "parking.capacity.build") : "parking.capacity.available";
             capacityText.text=compositionRoot.LocalizationService.Translate(new LocalizationKey(key))
                 .Replace("{used}",Occupied.ToString()).Replace("{capacity}",Capacity.ToString());
+            var queue=GetComponent<ParkingArrivalQueue>();
+            if(queue!=null) capacityText.text+="\n"+compositionRoot.LocalizationService.Translate(new LocalizationKey("firstplay.queue"))
+                .Replace("{waiting}",queue.Waiting.ToString()).Replace("{lost}",queue.TurnedAway.ToString());
         }
     }
 }

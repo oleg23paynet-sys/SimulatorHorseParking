@@ -15,6 +15,7 @@ namespace HorseParking.Presentation.Logistics
         [SerializeField] private Camera playerCamera = null!;
         [SerializeField] private GameCompositionRoot compositionRoot = null!;
         [SerializeField] private Text promptText = null!;
+        [SerializeField] private bool showIdleCartGuide = true;
         [Min(0.5f)] [SerializeField] private float interactionDistance = 3f;
 
         public void Configure(Camera cameraComponent, GameCompositionRoot root, Text text, float distance)
@@ -50,7 +51,7 @@ namespace HorseParking.Presentation.Logistics
                 return;
             }
 
-            if (!compositionRoot.HasCartJourney)
+            if (!showIdleCartGuide || !compositionRoot.HasCartJourney)
             {
                 promptText.text = string.Empty;
                 return;
@@ -66,6 +67,13 @@ namespace HorseParking.Presentation.Logistics
                 _ => "cart.state.unknown"
             };
             promptText.text = compositionRoot.LocalizationService.Translate(new LocalizationKey(guideKey));
+        }
+
+        private void LateUpdate()
+        {
+            if (promptText == null) return;
+            var background = promptText.transform.parent.GetComponent<Image>();
+            if (background != null) background.enabled = !string.IsNullOrEmpty(promptText.text);
         }
 
         private void SetPrompt(IInteractionTarget target)

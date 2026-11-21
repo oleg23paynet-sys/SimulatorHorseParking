@@ -88,7 +88,7 @@ namespace HorseParking.Presentation.Economy
             SetMenuOpen(false);
             tutorialText.text = compositionRoot.LocalizationService.Translate(
                 new LocalizationKey("ui.economy.tutorial"));
-            tutorialPanel.SetActive(true);
+            tutorialPanel.SetActive(FindAnyObjectByType<HorseParking.Presentation.Onboarding.FirstPlayableObjectives>() == null);
             tutorialHideTime = Time.unscaledTime + 8f;
             cartCapacityButton.onClick.AddListener(() => Purchase(ParkingUpgradeId.CartCapacity));
             cartSpeedButton.onClick.AddListener(() => Purchase(ParkingUpgradeId.CartSpeed));
@@ -123,7 +123,10 @@ namespace HorseParking.Presentation.Economy
                 SetMenuOpen(!menuOpen);
             }
 
-            compositionRoot.ParkingEconomyUseCase.Advance(Time.deltaTime);
+            // Give the first expansion a guaranteed earning path, without recurring debt.
+            if (compositionRoot.ConstructionRequirementsUseCase.GetSnapshot().State
+                == HorseParking.Core.Construction.ConstructionState.Completed)
+                compositionRoot.ParkingEconomyUseCase.Advance(Time.deltaTime);
             if (Time.unscaledTime >= nextRefreshTime) Refresh();
         }
 
@@ -155,7 +158,8 @@ namespace HorseParking.Presentation.Economy
             var localization = compositionRoot.LocalizationService;
             var snapshot = compositionRoot.ParkingEconomyUseCase.GetSnapshot();
             compactText.text = localization.Translate(
-                new LocalizationKey("ui.economy.compact"),
+                new LocalizationKey(compositionRoot.ConstructionRequirementsUseCase.GetSnapshot().State
+                    == HorseParking.Core.Construction.ConstructionState.Completed ? "ui.economy.compact" : "firstplay.balance_grace"),
                 new Dictionary<string, object>
                 {
                     ["gold"] = snapshot.Gold,

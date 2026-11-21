@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HorseParking.Presentation::HorseParking.Presentation.Construction.ConstructionRequirementsSettings
   planId: parking-slot-02
   planDisplayNameKey: construction.parking_slot
-  constructionDurationSeconds: 15
+  constructionDurationSeconds: 120
   requirements:
   - resourceId: wood
     requiredQuantity: 4

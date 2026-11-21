@@ -101,11 +101,12 @@ namespace HorseParking.Presentation.Logistics
 
             // The demo begins at the loading point. Use the normal domain transitions
             // to seed that state instead of letting Presentation fake a different location.
-            var initialDispatch = cart.TryDispatch(materialStore);
-            var initialArrival = cart.NotifyArrivedAtDestination();
-            if (!initialDispatch.Succeeded || !initialArrival.Succeeded)
+            if (demoModeEnabled)
             {
-                throw new InvalidOperationException("Could not place the starter cart at the material store.");
+                var initialDispatch = cart.TryDispatch(materialStore);
+                var initialArrival = cart.NotifyArrivedAtDestination();
+                if (!initialDispatch.Succeeded || !initialArrival.Succeeded)
+                    throw new InvalidOperationException("Could not place the starter cart at the material store.");
             }
 
             inventoryUseCase = new LogisticsInventoryUseCase(
