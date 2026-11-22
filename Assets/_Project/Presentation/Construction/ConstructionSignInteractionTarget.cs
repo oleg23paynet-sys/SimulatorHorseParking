@@ -21,7 +21,7 @@ namespace HorseParking.Presentation.Construction
         public InteractionAvailability Availability =>
             compositionRoot != null
             && compositionRoot.HasConstructionRequirements
-            && compositionRoot.ConstructionRequirementsUseCase.GetSnapshot().State != ConstructionState.Completed
+            && compositionRoot.ConstructionRequirementsUseCase.GetSnapshot().State != ConstructionState.InProgress
                 ? InteractionAvailability.Available
                 : InteractionAvailability.Unavailable;
 

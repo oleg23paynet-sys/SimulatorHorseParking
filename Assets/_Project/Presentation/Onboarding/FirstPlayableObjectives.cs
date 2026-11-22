@@ -57,8 +57,11 @@ namespace HorseParking.Presentation.Onboarding
    CurrentGoal=goal;
    title.text=T("firstplay.title");
    instruction.text=T("firstplay."+goal).Replace("{cost}",cost.ToString()).Replace("{gold}",inventory.Gold.ToString()).Replace("{recipe}",recipe).Replace("{served}",Mathf.Max(0,served-completedAtExpansion).ToString());
+   var parking=FindAnyObjectByType<ParkingExpansionPresenter>();
+   if(goal=="build")instruction.text="Материалы доставлены. B — прозрачный макет стойла; WASD — камера, R — поворот, ЛКМ — подтвердить, Esc — отмена.";
+   if(parking!=null&&parking.IsPlacing)instruction.text="Выберите ровное свободное место. Зелёный макет — можно строить; красный — место или подъезд заняты. Материалы списываются только после подтверждения.";
    footer.text=T("firstplay.footer");progress.fillAmount=stage/6f;
-   if(root.ConstructionRequirementsUseCase.GetSnapshot().State!=ConstructionState.Completed)footer.text+=" • "+T("firstplay.grace");
+   if(parking==null||parking.Capacity==1)footer.text+=" • "+T("firstplay.grace");
   }
  }
 }

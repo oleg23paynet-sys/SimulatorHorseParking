@@ -7,6 +7,7 @@ using HorseParking.Core.Localization;
 using HorseParking.Presentation.Composition;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.AI;
 
 namespace HorseParking.Presentation.Construction
 {
@@ -34,6 +35,38 @@ namespace HorseParking.Presentation.Construction
         private bool plannedPreviewVisible;
         private bool wasBuilding;
         private bool workersAreLeaving;
+        private bool parkingSitesMode;
+        private Quaternion originalSiteRotation;
+        private void Awake() { originalSiteRotation=transform.rotation; }
+        public bool ReadyForNextSite => isInitialized && !wasBuilding && !workersAreLeaving;
+        public void EnableParkingSites() { parkingSitesMode=true; if(isInitialized)RefreshVisuals(); }
+        public bool CanPlaceParkingSite(Vector3 position, Quaternion rotation)
+        {
+            var matrix=Matrix4x4.TRS(position,rotation*originalSiteRotation,transform.lossyScale);
+            Vector3? spawn=null;
+            var points=new List<Vector3>();
+            foreach(var point in GetComponentsInChildren<Transform>(true))
+            {
+                if(!point.name.StartsWith("GoblinSpawnPoint_")&&!point.name.StartsWith("ConstructionWorkPoint_")&&!point.name.StartsWith("GoblinExitPoint_"))continue;
+                var proposed=matrix.MultiplyPoint3x4(transform.InverseTransformPoint(point.position));
+                if(!NavMesh.SamplePosition(proposed,out var hit,.65f,NavMesh.AllAreas))return false;
+                if(point.name.StartsWith("GoblinSpawnPoint_"))spawn=hit.position;
+                points.Add(hit.position);
+            }
+            if(!spawn.HasValue)return false;
+            foreach(var point in points)
+            {
+                var path=new NavMeshPath();
+                if(!NavMesh.CalculatePath(spawn.Value,point,NavMesh.AllAreas,path)||path.status!=NavMeshPathStatus.PathComplete)return false;
+            }
+            return true;
+        }
+        public void MoveParkingSite(Vector3 position, Quaternion rotation)
+        {
+            parkingSitesMode=true;
+            workersRoot.SetActive(false);
+            transform.SetPositionAndRotation(position,rotation*originalSiteRotation);
+        }
 
         public void Configure(
             GameCompositionRoot root,
@@ -155,9 +188,9 @@ namespace HorseParking.Presentation.Construction
 
             // The complete ghost exists only while choosing a project. During construction
             // the authored A/B/C stages are the source of truth for the visible percentage.
-            ghostPreview.SetActive(isPlanned && plannedPreviewVisible);
-            progressVisual.gameObject.SetActive(isBuilding);
-            completedVisual.SetActive(isCompleted);
+            ghostPreview.SetActive(!parkingSitesMode && isPlanned && plannedPreviewVisible);
+            progressVisual.gameObject.SetActive(!parkingSitesMode && isBuilding);
+            completedVisual.SetActive(!parkingSitesMode && isCompleted);
             if (isBuilding && !wasBuilding)
             {
                 assemblyPresenter.PrepareForConstruction();
@@ -192,7 +225,7 @@ namespace HorseParking.Presentation.Construction
                 workersRoot.SetActive(false);
             }
             progressHudRoot.SetActive(isBuilding);
-            if (constructionSign != null) constructionSign.SetActive(!isCompleted);
+            if (constructionSign != null) constructionSign.SetActive(parkingSitesMode || !isCompleted);
 
             if (isBuilding)
             {

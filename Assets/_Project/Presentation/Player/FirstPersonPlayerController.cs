@@ -26,6 +26,7 @@ namespace HorseParking.Presentation.Player
         private bool uiInputBlocked;
 
         public event Action<IInteractionTarget, InteractionResult>? InteractionCompleted;
+        public Camera ViewCamera => playerCamera;
 
         public void Configure(Camera cameraComponent, GameCompositionRoot compositionRoot)
         {

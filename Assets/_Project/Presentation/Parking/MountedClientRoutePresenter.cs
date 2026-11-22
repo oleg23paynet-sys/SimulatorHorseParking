@@ -79,6 +79,8 @@ namespace HorseParking.Presentation.Parking
             animationAdapter.SetWalking(false);
         }
 
+        public Vector3[] GetAccessRoute() => new[] {spawnPosition,entryLanePoint.position,parkingPoint.position,entryLanePoint.position,paymentPoint.position,exitPoint.position};
+
         private void BeginRoute(RouteState nextState, params Transform[] routePoints)
         {
             state = nextState;

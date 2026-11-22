@@ -123,6 +123,11 @@ namespace HorseParking.Presentation.Construction
 
         private void Open()
         {
+            if(requirementsUseCase.GetSnapshot().State==ConstructionState.Completed)
+            {
+                FindAnyObjectByType<HorseParking.Presentation.Parking.ParkingExpansionPresenter>()?.BeginPlacement();
+                return;
+            }
             feedbackOverrideKey = null;
             // This panel has exactly one project; opening it selects that project,
             // even before materials arrive. Only the start action requires resources.
@@ -152,6 +157,13 @@ namespace HorseParking.Presentation.Construction
                 return;
             }
 
+            var expansion = FindAnyObjectByType<HorseParking.Presentation.Parking.ParkingExpansionPresenter>();
+            if(expansion != null)
+            {
+                Close();
+                expansion.BeginPlacement();
+                return;
+            }
             var result = requirementsUseCase.TryStartConstruction();
             feedbackOverrideKey = result.Succeeded
                 ? "ui.construction.status.started"
@@ -203,7 +215,7 @@ namespace HorseParking.Presentation.Construction
             projectOptionButton.interactable = snapshot.State == ConstructionState.Planned;
             requirementsHeadingText.text = localization.Translate(
                 new LocalizationKey("ui.construction.requirements"));
-            startButtonText.text = localization.Translate(new LocalizationKey("ui.construction.start"));
+            startButtonText.text = localization.CurrentLocale == "ru" ? "Выбрать место стойла" : "Choose parking location";
             closeButtonText.text = localization.Translate(new LocalizationKey("ui.common.close"));
             startButton.interactable = snapshot.CanStart && isProjectSelected;
 

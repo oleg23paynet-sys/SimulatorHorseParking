@@ -48,9 +48,9 @@ namespace HorseParking.Presentation.Editor
      { root.ConstructionRequirementsUseCase.TryRestoreProgress(ConstructionState.Planned,0); stage=3; }
      if(elapsed>110) throw new Exception("Both visitors did not complete payment/exit. paid="+paid.Count+" exited="+exited.Count);
     }
-    else if(stage==3 && manager.Capacity==1)
+    else if(stage==3 && manager.Capacity==2)
     {
-     Require(clients.Length==1,"Rollback removes extra visitor"); rollback=true;
+     Require(clients.Length==2,"Preparing another project retains completed parking bays"); rollback=true;
      root.ConstructionRequirementsUseCase.TryRestoreProgress(ConstructionState.Completed,1);stage=4;
     }
     else if(stage==4 && manager.Capacity==2 && clients.Length==2)

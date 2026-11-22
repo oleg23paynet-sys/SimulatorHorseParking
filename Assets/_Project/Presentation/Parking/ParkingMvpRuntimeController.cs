@@ -39,6 +39,22 @@ namespace HorseParking.Presentation.Parking
         private ParkingArrivalQueue arrivals;
         public int CompletedVisits { get; private set; }
         public int PaymentsCollected { get; private set; }
+        public Vector3[] GetAccessRoute() => routePresenter.GetAccessRoute();
+        public float ReplacementDelay => waitingForNextClient ? Mathf.Max(0f,(float)(nextClientArrivalAtSeconds-compositionRoot.GameClock.ElapsedSeconds)) : 0f;
+        public string ParkingStatus
+        {
+            get
+            {
+                if(!initialized)return "Подготовка";
+                if(waitingForNextClient)return ReplacementDelay>0 ? $"Выезд завершён, новый заезд через {Mathf.CeilToInt(ReplacementDelay)} с" : "Свободно: ждём всадника";
+                if(exitStarted)return "Выезд: место ещё занято";
+                if(CanOpenExit)return "Оплачено: откройте выход (E / ЛКМ)";
+                if(CanCollectPayment)return "Заберите оплату у лошади (E / ЛКМ)";
+                if(!clientParked)return "Место зарезервировано: всадник заезжает";
+                var left=Mathf.Max(0,(float)((currentArchetype?.ParkingDurationSeconds??paymentReadyAfterSeconds)-(compositionRoot.GameClock.ElapsedSeconds-parkedAtSeconds)));
+                return left>0 ? $"Стоянка: ещё {Mathf.CeilToInt(left)} с" : "Всадник возвращается к лошади, ожидайте оплату";
+            }
+        }
         public bool OccupiesSpace => initialized && !waitingForNextClient;
         public void ConfigureAdditionalSlot(string id) => additionalSlotId = id;
         public void ReleaseDetachedRider()

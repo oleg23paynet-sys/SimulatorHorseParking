@@ -71,6 +71,7 @@ namespace HorseParking.Presentation.Editor
      typeof(ConstructionRequirementsPanel).GetMethod("Open",flags).Invoke(panel,null);
      var button=(Button)typeof(ConstructionRequirementsPanel).GetField("startButton",flags).GetValue(panel);
      Check(button.interactable,"Construction button ready without selection trap");button.onClick.Invoke();
+     ConfirmPlacementForTest();
      Check(build.GetSnapshot().State==ConstructionState.InProgress,"UI starts construction");Check(!build.TryStartConstruction().Succeeded,"Duplicate start rejected");stage=5;
     }
     if(stage==5&&bays.Capacity==2){stage=6;Debug.Log("FIRST_PLAYABLE: second bay built through earned money and real cart travel.");}
@@ -96,6 +97,17 @@ namespace HorseParking.Presentation.Editor
    var image=new Texture2D(1440,900,TextureFormat.RGB24,false);image.ReadPixels(new Rect(0,0,1440,900),0,0);image.Apply();File.WriteAllBytes("Docs/FirstPlayable/review.png",image.EncodeToPNG());
    RenderTexture.active=null;camera.targetTexture=previous;for(int i=0;i<overlays.Length;i++){overlays[i].renderMode=RenderMode.ScreenSpaceOverlay;overlays[i].worldCamera=states[i].worldCamera;overlays[i].planeDistance=states[i].planeDistance;}
    Object.DestroyImmediate(image);rt.Release();Object.DestroyImmediate(rt);
+  }
+  public static void ConfirmPlacementForTest()
+  {
+   var placement=Object.FindAnyObjectByType<ParkingPlacementController>();
+   Check(placement!=null&&placement.IsPlacing,"Start button opens placement without spending materials");
+   for(int x=-24;x<=-6;x+=2)for(int z=-8;z<=14;z+=2)
+   {
+    if(!UnityEngine.AI.NavMesh.SamplePosition(new Vector3(x,0,z),out var hit,.6f,UnityEngine.AI.NavMesh.AllAreas))continue;
+    foreach(float angle in new[]{0f,90f,180f,270f})if(placement.TryPlaceAt(hit.position,Quaternion.Euler(0,angle,0)))return;
+   }
+   throw new Exception("No legal placement in test search area; inspect clearance and navigation.");
   }
   static void Finish(){EditorApplication.update-=Tick;SessionState.SetBool("FirstPlayableVerify",false);SessionState.SetBool("FirstPlayablePreview",false);Time.timeScale=1;EditorApplication.Exit(errors==0?0:1);}
  }

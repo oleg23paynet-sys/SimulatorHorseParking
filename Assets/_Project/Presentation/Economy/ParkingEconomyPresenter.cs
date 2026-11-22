@@ -124,8 +124,7 @@ namespace HorseParking.Presentation.Economy
             }
 
             // Give the first expansion a guaranteed earning path, without recurring debt.
-            if (compositionRoot.ConstructionRequirementsUseCase.GetSnapshot().State
-                == HorseParking.Core.Construction.ConstructionState.Completed)
+            if (FindAnyObjectByType<HorseParking.Presentation.Parking.ParkingExpansionPresenter>()?.Capacity > 1)
                 compositionRoot.ParkingEconomyUseCase.Advance(Time.deltaTime);
             if (Time.unscaledTime >= nextRefreshTime) Refresh();
         }
@@ -158,8 +157,7 @@ namespace HorseParking.Presentation.Economy
             var localization = compositionRoot.LocalizationService;
             var snapshot = compositionRoot.ParkingEconomyUseCase.GetSnapshot();
             compactText.text = localization.Translate(
-                new LocalizationKey(compositionRoot.ConstructionRequirementsUseCase.GetSnapshot().State
-                    == HorseParking.Core.Construction.ConstructionState.Completed ? "ui.economy.compact" : "firstplay.balance_grace"),
+                new LocalizationKey(FindAnyObjectByType<HorseParking.Presentation.Parking.ParkingExpansionPresenter>()?.Capacity > 1 ? "ui.economy.compact" : "firstplay.balance_grace"),
                 new Dictionary<string, object>
                 {
                     ["gold"] = snapshot.Gold,

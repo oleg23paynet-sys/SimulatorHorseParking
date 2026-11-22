@@ -58,6 +58,7 @@ namespace HorseParking.Presentation.Editor
      PanelAction("Close");PanelAction("Open");
      Require(startButton.interactable,"Reopening keeps sole project ready to build");
      startButton.onClick.Invoke();
+     FirstPlayableVerification.ConfirmPlacementForTest();
      Require(build.GetSnapshot().State==ConstructionState.InProgress,"Panel start button starts construction");
      Require(!build.TryStartConstruction().Succeeded,"Duplicate start rejected");stage=1;
     }
