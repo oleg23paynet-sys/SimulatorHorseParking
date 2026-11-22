@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace HorseParking.Presentation.Parking
 {
@@ -24,6 +25,29 @@ namespace HorseParking.Presentation.Parking
         private RouteState state;
         private Vector3 spawnPosition;
         private Quaternion spawnRotation;
+        private readonly Queue<Vector3> approach = new Queue<Vector3>();
+        public Vector3 ParkingPosition => parkingPoint.position;
+        public Vector3 EntryPosition => entryLanePoint.position;
+
+        public bool TryGetApproach(Vector3 origin, out Vector3[] corners)
+        {
+            corners = Array.Empty<Vector3>();
+            var path = new NavMeshPath();
+            if (!NavMesh.SamplePosition(origin, out var start, 2f, NavMesh.AllAreas)
+                || !NavMesh.SamplePosition(entryLanePoint.position, out var end, 1f, NavMesh.AllAreas)
+                || !NavMesh.CalculatePath(start.position, end.position, NavMesh.AllAreas, path)
+                || path.status != NavMeshPathStatus.PathComplete) return false;
+            corners = path.corners;
+            return true;
+        }
+
+        public void BeginArrivalFrom(Vector3 origin, Quaternion rotation, Vector3[] corners)
+        {
+            ResetToSpawn();
+            clientRoot.SetPositionAndRotation(origin, rotation);
+            foreach (var corner in corners) approach.Enqueue(corner);
+            BeginArrival();
+        }
 
         private enum RouteState { None, Arriving, GoingToPayment, Exiting }
 
@@ -72,6 +96,7 @@ namespace HorseParking.Presentation.Parking
 
         public void ResetToSpawn()
         {
+            approach.Clear();
             waypoints.Clear();
             destination = null;
             state = RouteState.None;
@@ -79,7 +104,7 @@ namespace HorseParking.Presentation.Parking
             animationAdapter.SetWalking(false);
         }
 
-        public Vector3[] GetAccessRoute() => new[] {spawnPosition,entryLanePoint.position,parkingPoint.position,entryLanePoint.position,paymentPoint.position,exitPoint.position};
+        public Vector3[] GetAccessRoute() => new[] {entryLanePoint.position,parkingPoint.position,entryLanePoint.position,paymentPoint.position,exitPoint.position};
 
         private void BeginRoute(RouteState nextState, params Transform[] routePoints)
         {
@@ -95,6 +120,18 @@ namespace HorseParking.Presentation.Parking
 
         private void Update()
         {
+            if (approach.Count > 0 && clientRoot != null)
+            {
+                var corner = approach.Peek(); corner.y = clientRoot.position.y;
+                var direction = corner-clientRoot.position;
+                if(direction.sqrMagnitude < .01f) approach.Dequeue();
+                else
+                {
+                    clientRoot.rotation = Quaternion.RotateTowards(clientRoot.rotation,Quaternion.LookRotation(direction),300f*Time.deltaTime);
+                    clientRoot.position = Vector3.MoveTowards(clientRoot.position,corner,speed*Time.deltaTime);
+                }
+                return;
+            }
             if (destination == null || clientRoot == null)
             {
                 return;

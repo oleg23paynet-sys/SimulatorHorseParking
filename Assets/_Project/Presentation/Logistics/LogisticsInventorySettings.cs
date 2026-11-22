@@ -68,7 +68,9 @@ namespace HorseParking.Presentation.Logistics
         public string MaterialStoreId => materialStoreId;
         public float CartTravelSpeedMetersPerSecond => cartTravelSpeedMetersPerSecond;
         public bool DemoModeEnabled => demoModeEnabled;
-        public int EffectiveStartingGold => demoModeEnabled ? demoStartingGold : startingGold;
+        public int EffectiveStartingGold => HorseParking.Presentation.Progress.PrototypeSessionPolicy.TestingGoldEnabled
+            ? HorseParking.Presentation.Progress.PrototypeSessionPolicy.TestingStartingGold
+            : (demoModeEnabled ? demoStartingGold : startingGold);
 
         public void CreateUseCases(
             out LogisticsInventoryUseCase inventoryUseCase,

@@ -50,6 +50,10 @@ namespace HorseParking.Presentation.Parking
         private bool consumeOnFootRootMotion;
         private bool routeBlocked;
         private bool running;
+        public void SetStallObstacles(Collider[] colliders)
+        {
+            routeObstacles=routeObstacles.Where(c=>c!=null && c.enabled).Concat(colliders).ToArray();
+        }
 
         public void Configure(
             Transform rider,

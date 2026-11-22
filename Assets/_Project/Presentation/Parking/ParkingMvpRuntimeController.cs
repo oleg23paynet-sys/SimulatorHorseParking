@@ -31,12 +31,18 @@ namespace HorseParking.Presentation.Parking
         private double parkedAtSeconds;
         private double paymentApproachStartedAtSeconds;
         private double nextClientArrivalAtSeconds;
+        private double automaticDepartureAtSeconds;
         private bool waitingForNextClient;
         private ParkingClientArchetype? currentArchetype;
         private int currentClientSequence;
         [SerializeField] private string additionalSlotId = "";
         private HorseParking.Application.Parking.ParkingLifecycleUseCase lifecycle;
         private ParkingArrivalQueue arrivals;
+        private Vector3[] arrivalCorners;
+        private float nextApproachCheck;
+        private bool entranceRouteBlocked;
+        public MountedClientRoutePresenter Route => routePresenter;
+        public void SetStallObstacles(Collider[] colliders) => riderSequence.SetStallObstacles(colliders);
         public int CompletedVisits { get; private set; }
         public int PaymentsCollected { get; private set; }
         public Vector3[] GetAccessRoute() => routePresenter.GetAccessRoute();
@@ -46,9 +52,9 @@ namespace HorseParking.Presentation.Parking
             get
             {
                 if(!initialized)return "Подготовка";
-                if(waitingForNextClient)return ReplacementDelay>0 ? $"Выезд завершён, новый заезд через {Mathf.CeilToInt(ReplacementDelay)} с" : "Свободно: ждём всадника";
+                if(waitingForNextClient)return ReplacementDelay>0 ? $"Выезд завершён, новый заезд через {Mathf.CeilToInt(ReplacementDelay)} с" : entranceRouteBlocked ? "Свободно, но перекрыт проезд от общей очереди" : "Свободно: ждём всадника из общей очереди";
                 if(exitStarted)return "Выезд: место ещё занято";
-                if(CanOpenExit)return "Оплачено: откройте выход (E / ЛКМ)";
+                if(CanOpenExit)return "Оплачено: всадник сейчас выедет автоматически";
                 if(CanCollectPayment)return "Заберите оплату у лошади (E / ЛКМ)";
                 if(!clientParked)return "Место зарезервировано: всадник заезжает";
                 var left=Mathf.Max(0,(float)((currentArchetype?.ParkingDurationSeconds??paymentReadyAfterSeconds)-(compositionRoot.GameClock.ElapsedSeconds-parkedAtSeconds)));
@@ -121,10 +127,23 @@ namespace HorseParking.Presentation.Parking
 
         private void Update()
         {
+            if (CanOpenExit && compositionRoot.GameClock.ElapsedSeconds >= automaticDepartureAtSeconds)
+            {
+                TryOpenExit();
+                return;
+            }
             if (waitingForNextClient)
             {
+                if(Time.time<nextApproachCheck)return;
+                nextApproachCheck=Time.time+.5f;
+                if(arrivals!=null)
+                {
+                    if(arrivals.EntranceBusy || arrivals.Waiting==0)return;
+                    entranceRouteBlocked=!routePresenter.TryGetApproach(arrivals.EntrancePosition,out arrivalCorners);
+                    if(entranceRouteBlocked)return;
+                }
                 if (compositionRoot.GameClock.ElapsedSeconds >= nextClientArrivalAtSeconds
-                    && (arrivals == null || arrivals.TryAdmit()))
+                    && (arrivals == null || arrivals.TryAdmit(this)))
                 {
                     BeginNextClient();
                 }
@@ -176,6 +195,7 @@ namespace HorseParking.Presentation.Parking
             collectedGold = payment.Gold;
             PaymentsCollected++;
             paymentCollected = true;
+            automaticDepartureAtSeconds = compositionRoot.GameClock.ElapsedSeconds + 1d;
             if (compositionRoot.HasLogisticsInventory)
             {
                 compositionRoot.LogisticsInventoryUseCase.AddGold(payment.Gold);
@@ -187,7 +207,7 @@ namespace HorseParking.Presentation.Parking
 
             paymentSackVisual.SetActive(false);
             RequestDialogue(ParkingClientDialogueMoment.PaymentReceived);
-            Debug.Log("Parking: collected " + payment.Gold + " gold. Go to the exit gate and left-click it.");
+            Debug.Log("Parking: collected " + payment.Gold + " gold. Automatic departure in one second.");
             return true;
         }
 
@@ -225,6 +245,7 @@ namespace HorseParking.Presentation.Parking
                 return;
             }
             clientParked = true;
+            if(arrivals!=null)arrivals.FinishArrival(this);
             riderReadyForDeparture = false;
             parkedAtSeconds = compositionRoot.GameClock.ElapsedSeconds;
             riderSequence.BeginParkingVisit();
@@ -302,7 +323,8 @@ namespace HorseParking.Presentation.Parking
             routePresenter.ResetToSpawn();
             SelectNextArchetype();
             clientVisual.SetActive(true);
-            routePresenter.BeginArrival();
+            if(arrivals!=null)routePresenter.BeginArrivalFrom(arrivals.EntrancePosition,arrivals.EntranceRotation,arrivalCorners);
+            else routePresenter.BeginArrival();
             RequestDialogue(ParkingClientDialogueMoment.Arriving);
             Debug.Log("Parking: next client archetype is arriving.");
         }
@@ -314,5 +336,7 @@ namespace HorseParking.Presentation.Parking
 
             ClientDialogueRequested?.Invoke(currentArchetype, moment);
         }
+
+        private void OnDisable(){if(arrivals!=null)arrivals.FinishArrival(this);}
     }
 }

@@ -20,6 +20,7 @@ namespace HorseParking.Presentation.Onboarding
   public void Configure(GameCompositionRoot composition,GameObject view,Text heading,Text body,Text hint,Image fill)
   {root=composition;panel=view;title=heading;instruction=body;footer=hint;progress=fill;}
   string T(string key)=>root.LocalizationService.Translate(new LocalizationKey(key));
+  void Start(){panel.SetActive(false);}
   void Update()
   {
    if(Input.GetKeyDown(KeyCode.F1))panel.SetActive(!panel.activeSelf);
@@ -58,6 +59,7 @@ namespace HorseParking.Presentation.Onboarding
    title.text=T("firstplay.title");
    instruction.text=T("firstplay."+goal).Replace("{cost}",cost.ToString()).Replace("{gold}",inventory.Gold.ToString()).Replace("{recipe}",recipe).Replace("{served}",Mathf.Max(0,served-completedAtExpansion).ToString());
    var parking=FindAnyObjectByType<ParkingExpansionPresenter>();
+   if(goal=="exit")instruction.text="Оплата получена. Всадник выедет автоматически; дождитесь полного выезда и следующего клиента из очереди.";
    if(goal=="build")instruction.text="Материалы доставлены. B — прозрачный макет стойла; WASD — камера, R — поворот, ЛКМ — подтвердить, Esc — отмена.";
    if(parking!=null&&parking.IsPlacing)instruction.text="Выберите ровное свободное место. Зелёный макет — можно строить; красный — место или подъезд заняты. Материалы списываются только после подтверждения.";
    footer.text=T("firstplay.footer");progress.fillAmount=stage/6f;

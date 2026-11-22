@@ -4084,16 +4084,16 @@ namespace HorseParking.Presentation.Editor
             {
                 EnsureFolder("Assets/_Project/Content/Models/Props/ConstructionHammer");
                 EnsureFolder("Assets/_Project/Content/Models/Props/ConstructionHammer/Materials");
-                var shader = Shader.Find("Standard")
-                    ?? throw new System.InvalidOperationException("Standard shader is unavailable.");
+                var shader = Shader.Find("Universal Render Pipeline/Lit")
+                    ?? throw new System.InvalidOperationException("URP Lit shader is unavailable.");
                 material = new Material(shader) { name = "M_ConstructionHammer" };
                 AssetDatabase.CreateAsset(material, ConstructionHammerMaterialPath);
             }
 
-            material.shader = Shader.Find("Standard");
-            material.mainTexture = texture;
-            material.color = Color.white;
-            material.SetFloat("_Glossiness", 0.18f);
+            material.shader = Shader.Find("Universal Render Pipeline/Lit");
+            material.SetTexture("_BaseMap", texture);
+            material.SetColor("_BaseColor", Color.white);
+            material.SetFloat("_Smoothness", 0.18f);
             EditorUtility.SetDirty(material);
             return material;
         }

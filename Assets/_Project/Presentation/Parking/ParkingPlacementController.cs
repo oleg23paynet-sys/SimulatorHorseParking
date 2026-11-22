@@ -21,7 +21,7 @@ namespace HorseParking.Presentation.Parking
         private Bounds footprint;
         private Vector3 candidate, groundPoint, cameraOrigin;
         private Quaternion rotation=Quaternion.identity;
-        private bool valid, helpVisible=true, originalCameraEnabled;
+        private bool valid, helpVisible, originalCameraEnabled;
         private float nextValidation, inputReadyAt;
         private float noticeUntil;
         private string notice;
@@ -35,7 +35,7 @@ namespace HorseParking.Presentation.Parking
         public void BeginPlacement()
         {
             if(IsPlacing)return;
-            if(!owner.PrepareProject()) {message="Сначала дождитесь окончания стройки и ухода рабочих.";helpVisible=true;return;}
+            if(!owner.PrepareProject()) {notice="Сначала дождитесь окончания стройки и ухода рабочих.";noticeUntil=Time.unscaledTime+4;return;}
             player=FindAnyObjectByType<FirstPersonPlayerController>();
             playerCamera=player!=null?player.ViewCamera:null;
             if(playerCamera==null){message="Не найдена камера игрока.";return;}
@@ -164,7 +164,21 @@ namespace HorseParking.Presentation.Parking
             }
             Transform Point(string name)=>template.GetComponentsInChildren<Transform>(true).FirstOrDefault(t=>t.name==name);
             Vector3 World(Transform point)=>candidate+rotation*template.transform.InverseTransformPoint(point.position);
-            var names=new[]{"ClientMountedHorseRider_01","ClientEntryLanePoint_01","ClientParkingPoint_01","ClientEntryLanePoint_01","ClientPaymentPoint_01","ClientExitPoint_01"};
+            var entranceQueue=owner.GetComponent<ParkingArrivalQueue>();
+            var entry=Point("ClientEntryLanePoint_01");
+            if(entranceQueue!=null && entry!=null)
+            {
+                var relative=Quaternion.Inverse(rotation)*(entranceQueue.EntrancePosition-center);
+                if(Mathf.Abs(relative.x)<half.x+3 && Mathf.Abs(relative.z)<half.z+3)
+                {message="Оставьте общий въезд и место для очереди свободными.";return false;}
+                var access=new NavMeshPath();
+                if(!NavMesh.SamplePosition(entranceQueue.EntrancePosition,out var start,2f,NavMesh.AllAreas)
+                    || !NavMesh.SamplePosition(World(entry),out var end,1f,NavMesh.AllAreas)
+                    || !NavMesh.CalculatePath(start.position,end.position,NavMesh.AllAreas,access)
+                    || access.status!=NavMeshPathStatus.PathComplete)
+                {message="От общей очереди нет проезда к этому стойлу. Выберите доступное место.";return false;}
+            }
+            var names=new[]{"ClientEntryLanePoint_01","ClientParkingPoint_01","ClientEntryLanePoint_01","ClientPaymentPoint_01","ClientExitPoint_01"};
             for(int i=1;i<names.Length;i++)
             {
                 var a=Point(names[i-1]);var b=Point(names[i]);if(a==null||b==null){message="В шаблоне отсутствуют точки маршрута.";return false;}
@@ -205,10 +219,16 @@ namespace HorseParking.Presentation.Parking
                 string stock=string.Join(" • ",root.ConstructionRequirementsUseCase.GetSnapshot().Requirements.Select(r=>r.ResourceId.Value+" "+r.AvailableQuantity+"/"+r.RequiredQuantity));
                 GUI.Label(new Rect(rect.x+12,rect.y+6,rect.width-24,rect.height-12),"РАЗМЕЩЕНИЕ СТОЙЛА\nWASD — камера • Колесо — масштаб • R — поворот на 90°\nЛКМ — разместить • ПКМ / Esc — отмена без расхода материалов\nСклад: "+stock+"\n"+(Time.unscaledTime<noticeUntil?notice:message),style);return;
             }
-            if(!helpVisible)return;
+            if(!helpVisible)
+            {
+                var hintStyle=new GUIStyle(GUI.skin.box){fontSize=12,wordWrap=true};
+                GUI.Box(new Rect(12,Screen.height-42,Mathf.Min(520,Screen.width-24),30),
+                    Time.unscaledTime<noticeUntil?notice:"B — строить   H — справка   F1 — цели   I — склад   M — экономика",hintStyle);
+                return;
+            }
             var queue=GetComponent<ParkingArrivalQueue>();
             string text="ПАРКОВКА — ВРЕМЕННАЯ СПРАВКА (H — скрыть)\n"+
-                "E / ЛКМ: поговорить, забрать мешочек с оплатой, открыть выход.\nОплата не освобождает место: откройте выход и дождитесь полного выезда.\nПосле выезда — пауза 3 с; затем первый из очереди заедет автоматически.\nНет мест? Соберите оплату и выпустите готовых клиентов, ждите окончания стоянки или нажмите B и постройте ещё стойло.\nМатериалы: магазин → телега → разгрузка на складе. Материалы в телеге не считаются складскими.\nB — новая стройка, R — поворот макета, Esc/ПКМ — отмена. F1 — цели, M — экономика.\n";
+                "E / ЛКМ: поговорить, забрать мешочек с оплатой.\nПосле оплаты всадник выезжает автоматически через 1 с. Место освободится после полного выезда.\nПосле выезда — пауза 3 с; затем первый из очереди заедет автоматически.\nНет мест? Соберите оплату и дождитесь выезда готовых клиентов, ждите окончания стоянки или нажмите B и постройте ещё стойло.\nМатериалы: магазин → телега → разгрузка на складе. Материалы в телеге не считаются складскими.\nB — новая стройка, R — поворот макета, Esc/ПКМ — отмена. F1 — цели, M — экономика.\n";
             if(queue!=null)text+=$"Очередь {queue.Waiting}/2; новый посетитель через {Mathf.CeilToInt(queue.NextArrivalSeconds)} с. Первый ждёт ещё {Mathf.CeilToInt(queue.FirstVisitorPatience)} с; затем уйдёт.\n";
             int index=1;foreach(var slot in owner.Slots)text+=$"Место {index++}: {slot.ParkingStatus}\n";
             text+=message;

@@ -28,10 +28,14 @@ namespace HorseParking.Presentation.Parking
         {compositionRoot=root;firstSlot=first;secondSlotTemplate=template;capacityText=text;}
         private void Start()
         {
+            ParkingStallLayout.Prepare(firstSlot,null);
+            ParkingStallLayout.Prepare(secondSlotTemplate.GetComponentInChildren<ParkingMvpRuntimeController>(true),secondSlotTemplate.transform);
             construction=FindAnyObjectByType<ConstructionProcessPresenter>();
             if(construction!=null)construction.EnableParkingSites();
             placement=gameObject.AddComponent<ParkingPlacementController>();
             placement.Configure(this,compositionRoot,secondSlotTemplate,construction);
+            var capacityPanel=capacityText.transform.parent.GetComponent<RectTransform>();
+            if(capacityPanel!=null)capacityPanel.sizeDelta=new Vector2(capacityPanel.sizeDelta.x,72);
         }
         public void BeginPlacement()
         {
@@ -76,12 +80,13 @@ namespace HorseParking.Presentation.Parking
                 addedSlots.Add(runtime);bay.SetActive(true);
                 completedConsumed=true;hasPendingSite=false;placement?.CompleteSite();
             }
-            string action=Occupied>=Capacity?"Нет мест: заберите оплату и откройте выход, либо B — построить стойло.":"Свободное место ждёт всадника из очереди.";
-            if(state==ConstructionState.InProgress)action="Стройка идёт: обслуживайте готовые стойла.";
-            else if(hasPendingSite)action="Стойло готово: ждём, пока рабочие освободят площадку.";
+            string action=Occupied>=Capacity?"Нет мест • H — что делать":"Ждём всадника";
+            if(state==ConstructionState.InProgress)action="Идёт строительство";
+            else if(hasPendingSite)action="Рабочие освобождают площадку";
             var queue=GetComponent<ParkingArrivalQueue>();
-            capacityText.text=$"ПАРКОВКА {Occupied}/{Capacity}\n{action}";
-            if(queue!=null)capacityText.text+=$"\nОчередь {queue.Waiting}/2 • Прибытие через {Mathf.CeilToInt(queue.NextArrivalSeconds)} с • Уехали: {queue.TurnedAway}";
+            capacityText.text=$"ПАРКОВКА {Occupied}/{Capacity}";
+            if(queue!=null)capacityText.text+=$" • Очередь {queue.Waiting}/2";
+            capacityText.text+=$"\n{action}";
         }
     }
 }

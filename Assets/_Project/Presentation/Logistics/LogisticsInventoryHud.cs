@@ -30,6 +30,8 @@ namespace HorseParking.Presentation.Logistics
         [Min(0.05f)] [SerializeField] private float refreshIntervalSeconds = 0.25f;
 
         private float nextRefreshTime;
+        private CanvasGroup visibility = null!;
+        private bool inventoryVisible;
 
         public void Configure(
             GameCompositionRoot root,
@@ -47,6 +49,11 @@ namespace HorseParking.Presentation.Logistics
 
         private void Start()
         {
+            visibility = GetComponent<CanvasGroup>();
+            if(visibility==null)visibility=gameObject.AddComponent<CanvasGroup>();
+            visibility.alpha = 0;
+            visibility.blocksRaycasts = false;
+            visibility.interactable = false;
             if (compositionRoot == null || !compositionRoot.HasLogisticsInventory)
             {
                 Debug.LogError("Logistics HUD is missing its configured inventory use case.", this);
@@ -68,6 +75,11 @@ namespace HorseParking.Presentation.Logistics
 
         private void Update()
         {
+            if (Input.GetKeyDown(KeyCode.I))
+            {
+                inventoryVisible = !inventoryVisible;
+                visibility.alpha = inventoryVisible ? 1 : 0;
+            }
             if (Time.unscaledTime < nextRefreshTime)
             {
                 return;
